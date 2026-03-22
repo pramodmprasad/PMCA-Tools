@@ -1,0 +1,25 @@
+---
+description: How to add features without touching PMCA Tools.html until merge
+alwaysApply: true
+---
+
+# PMCA Tools — feature development
+
+## Branches
+
+- **`main`** — stable; treat `PMCA Tools.html` as frozen unless the user explicitly wants integration work.
+- **`development`** — default branch for new work (feature folders, server tweaks, docs).
+
+## Where to add code
+
+- **New UI/features:** `features/<feature-name>/` using the same pattern as `networth/` and `partnership/` (`index.html`, `app.js`, `styles.css`).
+- **Avoid** editing `PMCA Tools.html` for early work; the user can open new pages directly via `http://localhost:3000/features/<feature-name>/index.html` after `npm start`.
+
+## When to touch the monolith
+
+Only when the user asks to **embed** a feature in the main dashboard (nav links, shared styles). Prefer small, reviewable edits.
+
+## Data and API
+
+- Respect `.gitignore` for `Data/`, `node_modules/`, `.env`.
+- New HTTP endpoints in `server.js` only when needed; keep changes minimal and documented in commit messages.
