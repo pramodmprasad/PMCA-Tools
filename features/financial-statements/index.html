@@ -22,9 +22,14 @@
       <input type="file" id="file-input" accept=".fsjson,.json" style="display:none;" />
       <button type="button" class="btn" id="btn-print">Print / PDF</button>
       <button type="button" class="btn" id="btn-reset-template">Reset lines to template</button>
+      <button type="button" class="btn" id="btn-save-data" title="Save to Data/FinancialStatements/{FY}/">Save to Data folder</button>
+      <button type="button" class="btn" id="btn-load-data" title="Load from server data folder">Load from Data folder</button>
     </div>
     <p class="toolbar-hint" id="fs-login-hint">
       Open this tool from PMCA Tools (logged in) to record your user on saves and to use Finalise.
+    </p>
+    <p class="toolbar-hint" id="fs-server-hint" style="display:none;">
+      Server data: files are stored under <code>Data/FinancialStatements/</code> as <code>{Client}_{FY}.fsjson</code> (e.g. <code>A_2025-26.fsjson</code>).
     </p>
 
     <div id="fs-finalised-banner" class="finalised-banner" style="display:none"></div>
@@ -53,6 +58,11 @@
             <label for="entity-name">Name of entity <span style="color:#c62828;">*</span></label>
             <input type="text" id="entity-name" placeholder="Legal name as per records" />
           </div>
+          <div class="field">
+            <label for="client-file-key">File name key (client) <span style="color:#c62828;">*</span></label>
+            <input type="text" id="client-file-key" placeholder="e.g. A, B, C — used as A_2025-26.fsjson" maxlength="80" />
+            <p class="hint">Short key for saving under the financial year folder. Same entity should keep the same key each year.</p>
+          </div>
           <div class="field corp-only-field">
             <label for="cin">CIN (if applicable)</label>
             <input type="text" id="cin" placeholder="Corporate Identification Number" />
@@ -73,11 +83,33 @@
             <label for="period-to">Reporting period to</label>
             <input type="date" id="period-to" />
           </div>
+          <div class="field">
+            <label>Financial year (from period end)</label>
+            <input type="text" id="financial-year-display" readonly class="fs-readonly-input" />
+          </div>
           <div class="field nonprofit-only">
             <label>
               <input type="checkbox" id="ie-mode" />
               Use <strong>Income &amp; Expenditure</strong> (for non-profit / trust / society)
             </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="fs-import-prev-card">
+        <h2>Previous year figures</h2>
+        <p class="hint">Import amounts from a prior year’s saved file into the <strong>Previous year</strong> columns. Line items are matched by name (case-insensitive).</p>
+        <div class="row">
+          <div class="field">
+            <button type="button" class="btn" id="btn-import-prev-file">Import from file…</button>
+            <input type="file" id="import-prev-file-input" accept=".fsjson,.json" style="display:none;" />
+          </div>
+          <div class="field" id="fs-import-server-wrap" style="display:none;">
+            <label for="import-prev-fy">Prior FY (on server)</label>
+            <select id="import-prev-fy"></select>
+            <label for="import-prev-file-select" style="margin-top:0.5rem;">File</label>
+            <select id="import-prev-file-select"></select>
+            <button type="button" class="btn btn-small" id="btn-import-prev-server" style="margin-top:0.35rem;">Import previous year from Data folder</button>
           </div>
         </div>
       </section>
@@ -93,13 +125,15 @@
                 <thead>
                   <tr>
                     <th>Particulars</th>
-                    <th class="num">Amount (₹)</th>
+                    <th class="num" id="th-assets-prev">Previous year (₹)</th>
+                    <th class="num" id="th-assets-cur">Current year (₹)</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-assets"></tbody>
                 <tfoot>
                   <tr class="total-row">
                     <td>Total assets</td>
+                    <td class="num" id="total-assets-prev">0.00</td>
                     <td class="num" id="total-assets">0.00</td>
                   </tr>
                 </tfoot>
@@ -117,13 +151,15 @@
                 <thead>
                   <tr>
                     <th>Particulars</th>
-                    <th class="num">Amount (₹)</th>
+                    <th class="num" id="th-liab-prev">Previous year (₹)</th>
+                    <th class="num" id="th-liab-cur">Current year (₹)</th>
                   </tr>
                 </thead>
                 <tbody id="tbody-liab"></tbody>
                 <tfoot>
                   <tr class="total-row">
                     <td>Total equity and liabilities</td>
+                    <td class="num" id="total-liab-prev">0.00</td>
                     <td class="num" id="total-liab">0.00</td>
                   </tr>
                 </tfoot>
@@ -145,13 +181,15 @@
             <thead>
               <tr>
                 <th>Particulars</th>
-                <th class="num">Amount (₹)</th>
+                <th class="num" id="th-pl-prev">Previous year (₹)</th>
+                <th class="num" id="th-pl-cur">Current year (₹)</th>
               </tr>
             </thead>
             <tbody id="tbody-pl"></tbody>
             <tfoot>
               <tr class="total-row">
                 <td id="pl-net-label">Profit / (loss) for the period</td>
+                <td class="num" id="total-pl-net-prev">0.00</td>
                 <td class="num" id="total-pl-net">0.00</td>
               </tr>
             </tfoot>
@@ -178,6 +216,27 @@
       </section>
     </main>
   </div>
+
+  <div id="fs-load-modal" class="fs-modal" style="display:none;" aria-hidden="true">
+    <div class="fs-modal-backdrop"></div>
+    <div class="fs-modal-box">
+      <h3>Load from Data folder</h3>
+      <div class="field">
+        <label for="load-data-fy">Financial year</label>
+        <select id="load-data-fy"></select>
+      </div>
+      <div class="field">
+        <label for="load-data-file">File</label>
+        <select id="load-data-file"></select>
+      </div>
+      <p class="hint" id="load-data-path-hint"></p>
+      <div class="fs-modal-actions">
+        <button type="button" class="btn" id="load-data-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="load-data-confirm">Load</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

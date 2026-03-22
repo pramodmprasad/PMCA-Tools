@@ -267,7 +267,52 @@ table.fs-table {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  width: 9rem;
+  min-width: 7rem;
+  width: 8.5rem;
+}
+
+.fs-readonly-input {
+  background: #f1f5f9 !important;
+  cursor: default;
+}
+
+.fs-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.fs-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.fs-modal-box {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  padding: 1.25rem;
+  max-width: 420px;
+  width: 100%;
+}
+
+.fs-modal-box h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.fs-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .fs-table input.line-name {
@@ -324,7 +369,7 @@ table.fs-table {
 
 @media print {
   body { background: #fff; }
-  .toolbar, .toolbar-hint, .section-actions, .entity-toggle, .hint, header .subtitle, #audit-log-card { display: none !important; }
+  .toolbar, .toolbar-hint, .section-actions, .entity-toggle, .hint, header .subtitle, #audit-log-card, #fs-load-modal { display: none !important; }
   .print-header { display: block; text-align: center; margin-bottom: 1rem; }
   .print-header h1 { font-size: 1.1rem; margin: 0 0 0.25rem; }
   .print-header p { margin: 0.15rem 0; font-size: 0.85rem; }

@@ -5,6 +5,7 @@ node_modules/
 Data/database.json
 Data/DSC/
 Data/Partnership/
+Data/FinancialStatements/
 
 # Environment / secrets
 .env

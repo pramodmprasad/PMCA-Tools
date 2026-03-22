@@ -11,9 +11,12 @@
     role: ''
   };
 
+  var serverAvailable = false;
+
   var state = {
     entityType: 'corporate',
     entityName: '',
+    clientFileKey: '',
     cin: '',
     pan: '',
     periodFrom: '',
@@ -51,6 +54,43 @@
 
   function canFinalise() {
     return !state.finalised && !!ctx.userId;
+  }
+
+  function getIndianFYKeyFromPeriodEnd(isoDate) {
+    if (!isoDate) return '';
+    var parts = String(isoDate).split('-');
+    if (parts.length < 3) return '';
+    var y = parseInt(parts[0], 10);
+    var m = parseInt(parts[1], 10);
+    if (isNaN(y) || isNaN(m)) return '';
+    var fyStart = m <= 3 ? y - 1 : y;
+    var fyEndShort = (fyStart + 1) % 100;
+    return fyStart + '-' + String(fyEndShort).padStart(2, '0');
+  }
+
+  function getPreviousFYKey(fy) {
+    var m = String(fy).match(/^(\d{4})-(\d{2})$/);
+    if (!m) return '';
+    var start = parseInt(m[1], 10) - 1;
+    var end = (start + 1) % 100;
+    return start + '-' + String(end).padStart(2, '0');
+  }
+
+  function sanitizeClientKeyForFile(key) {
+    if (key == null || String(key).trim() === '') return '';
+    return String(key)
+      .trim()
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+      .replace(/\s+/g, '_')
+      .replace(/_+/g, '_')
+      .slice(0, 80);
+  }
+
+  function suggestClientKeyFromEntityName(name) {
+    if (!name || !String(name).trim()) return '';
+    var w = String(name).trim().split(/\s+/)[0];
+    var s = w.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 20);
+    return s || '';
   }
 
   function parseAmount(s) {
@@ -92,72 +132,93 @@
     state.finalisedAt = o.finalisedAt || '';
     state.finalisedByUserId = o.finalisedByUserId || '';
     state.finalisedByStaffName = o.finalisedByStaffName || '';
+    state.clientFileKey = o.clientFileKey != null ? String(o.clientFileKey) : '';
+  }
+
+  function normalizeRow(r) {
+    return {
+      id: r.id || uid(),
+      name: r.name != null ? r.name : '',
+      amount: r.amount != null ? String(r.amount) : '',
+      amountPrev: r.amountPrev != null ? String(r.amountPrev) : ''
+    };
+  }
+
+  function normalizeRows(arr) {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(normalizeRow);
   }
 
   function corporateDefaults() {
+    function row(name) {
+      return { id: uid(), name: name, amount: '', amountPrev: '' };
+    }
     return {
       assets: [
-        { id: uid(), name: 'Property, plant and equipment', amount: '' },
-        { id: uid(), name: 'Capital work-in-progress', amount: '' },
-        { id: uid(), name: 'Intangible assets', amount: '' },
-        { id: uid(), name: 'Financial assets', amount: '' },
-        { id: uid(), name: 'Other non-current assets', amount: '' },
-        { id: uid(), name: 'Inventories', amount: '' },
-        { id: uid(), name: 'Trade receivables', amount: '' },
-        { id: uid(), name: 'Cash and cash equivalents', amount: '' },
-        { id: uid(), name: 'Other current assets', amount: '' }
+        row('Property, plant and equipment'),
+        row('Capital work-in-progress'),
+        row('Intangible assets'),
+        row('Financial assets'),
+        row('Other non-current assets'),
+        row('Inventories'),
+        row('Trade receivables'),
+        row('Cash and cash equivalents'),
+        row('Other current assets')
       ],
       liabilities: [
-        { id: uid(), name: 'Equity share capital', amount: '' },
-        { id: uid(), name: 'Other equity', amount: '' },
-        { id: uid(), name: 'Long-term borrowings', amount: '' },
-        { id: uid(), name: 'Deferred tax liabilities (net)', amount: '' },
-        { id: uid(), name: 'Long-term provisions', amount: '' },
-        { id: uid(), name: 'Short-term borrowings', amount: '' },
-        { id: uid(), name: 'Trade payables', amount: '' },
-        { id: uid(), name: 'Other current liabilities', amount: '' },
-        { id: uid(), name: 'Short-term provisions', amount: '' }
+        row('Equity share capital'),
+        row('Other equity'),
+        row('Long-term borrowings'),
+        row('Deferred tax liabilities (net)'),
+        row('Long-term provisions'),
+        row('Short-term borrowings'),
+        row('Trade payables'),
+        row('Other current liabilities'),
+        row('Short-term provisions')
       ],
       plLines: [
-        { id: uid(), name: 'Revenue from operations', amount: '' },
-        { id: uid(), name: 'Other income', amount: '' },
-        { id: uid(), name: 'Cost of materials consumed', amount: '' },
-        { id: uid(), name: 'Employee benefits expense', amount: '' },
-        { id: uid(), name: 'Finance costs', amount: '' },
-        { id: uid(), name: 'Depreciation and amortisation', amount: '' },
-        { id: uid(), name: 'Other expenses', amount: '' },
-        { id: uid(), name: 'Tax expense', amount: '' }
+        row('Revenue from operations'),
+        row('Other income'),
+        row('Cost of materials consumed'),
+        row('Employee benefits expense'),
+        row('Finance costs'),
+        row('Depreciation and amortisation'),
+        row('Other expenses'),
+        row('Tax expense')
       ]
     };
   }
 
   function nonCorporateDefaults() {
+    function row(name) {
+      return { id: uid(), name: name, amount: '', amountPrev: '' };
+    }
     return {
       assets: [
-        { id: uid(), name: 'Fixed assets (net block)', amount: '' },
-        { id: uid(), name: 'Investments', amount: '' },
-        { id: uid(), name: 'Loans and advances', amount: '' },
-        { id: uid(), name: 'Inventories', amount: '' },
-        { id: uid(), name: 'Trade receivables', amount: '' },
-        { id: uid(), name: 'Cash and bank balances', amount: '' },
-        { id: uid(), name: 'Other current assets', amount: '' }
+        row('Fixed assets (net block)'),
+        row('Investments'),
+        row('Loans and advances'),
+        row('Inventories'),
+        row('Trade receivables'),
+        row('Cash and bank balances'),
+        row('Other current assets')
       ],
       liabilities: [
-        { id: uid(), name: 'Capital / partners\' capital', amount: '' },
-        { id: uid(), name: 'Reserves and surplus', amount: '' },
-        { id: uid(), name: 'Long-term borrowings', amount: '' },
-        { id: uid(), name: 'Current liabilities', amount: '' },
-        { id: uid(), name: 'Provisions', amount: '' }
+        row('Capital / partners\' capital'),
+        row('Reserves and surplus'),
+        row('Long-term borrowings'),
+        row('Current liabilities'),
+        row('Provisions')
       ],
       plLines: [
-        { id: uid(), name: 'Revenue / receipts', amount: '' },
-        { id: uid(), name: 'Other income', amount: '' },
-        { id: uid(), name: 'Cost of goods / services', amount: '' },
-        { id: uid(), name: 'Employee expenses', amount: '' },
-        { id: uid(), name: 'Finance charges', amount: '' },
-        { id: uid(), name: 'Depreciation', amount: '' },
-        { id: uid(), name: 'Other expenses', amount: '' },
-        { id: uid(), name: 'Tax', amount: '' }
+        row('Revenue / receipts'),
+        row('Other income'),
+        row('Cost of goods / services'),
+        row('Employee expenses'),
+        row('Finance charges'),
+        row('Depreciation'),
+        row('Other expenses'),
+        row('Tax')
       ]
     };
   }
@@ -168,6 +229,23 @@
     state.assets = d.assets;
     state.liabilities = d.liabilities;
     state.plLines = d.plLines;
+  }
+
+  function updateYearLabelsUi() {
+    var fy = getIndianFYKeyFromPeriodEnd(state.periodTo);
+    var prevFy = getPreviousFYKey(fy);
+    var disp = byId('financial-year-display');
+    if (disp) disp.value = fy ? fy + ' (save folder: Data/FinancialStatements/' + fy + '/)' : '';
+    var prevLabel = prevFy ? 'Previous year — ' + prevFy + ' (₹)' : 'Previous year (₹)';
+    var curLabel = fy ? 'Current year — ' + fy + ' (₹)' : 'Current year (₹)';
+    ['th-assets-prev', 'th-liab-prev', 'th-pl-prev'].forEach(function (id) {
+      var el = byId(id);
+      if (el) el.textContent = prevLabel;
+    });
+    ['th-assets-cur', 'th-liab-cur', 'th-pl-cur'].forEach(function (id) {
+      var el = byId(id);
+      if (el) el.textContent = curLabel;
+    });
   }
 
   function updateStaffDisplay() {
@@ -254,13 +332,19 @@
     return d.innerHTML;
   }
 
+  function updateToolbarDataButtons() {
+    var dis = isLocked() || !serverAvailable;
+    ['btn-save-data', 'btn-load-data'].forEach(function (id) {
+      var b = byId(id);
+      if (b) b.disabled = dis;
+    });
+  }
+
   function applyLockedState() {
     var locked = isLocked();
     var main = byId('fs-main');
     if (!main) return;
-    var controls = main.querySelectorAll(
-      'input, textarea, select, button'
-    );
+    var controls = main.querySelectorAll('input, textarea, select, button');
     for (var i = 0; i < controls.length; i++) {
       var c = controls[i];
       if (c.id === 'btn-print') continue;
@@ -271,11 +355,16 @@
     }
     var tb = byId('btn-finalise');
     if (tb) tb.disabled = locked || !canFinalise();
+    updateToolbarDataButtons();
     updateFinaliseUi();
   }
 
   function syncFormFields() {
     byId('entity-name').value = state.entityName;
+    if (byId('client-file-key')) {
+      byId('client-file-key').value = state.clientFileKey;
+      if (state.clientFileKey) byId('client-file-key').dataset.touched = '1';
+    }
     byId('cin').value = state.cin;
     byId('pan').value = state.pan;
     byId('period-from').value = state.periodFrom;
@@ -300,6 +389,7 @@
     }
 
     byId('pl-title-display').textContent = plTitle();
+    updateYearLabelsUi();
     renderTables();
     updateStaffDisplay();
     renderAuditLog();
@@ -314,6 +404,9 @@
 
   function collectForm() {
     state.entityName = byId('entity-name').value.trim();
+    state.clientFileKey = byId('client-file-key')
+      ? byId('client-file-key').value.trim()
+      : '';
     state.cin = byId('cin').value.trim();
     state.pan = byId('pan').value.trim();
     state.periodFrom = byId('period-from').value;
@@ -337,6 +430,13 @@
         '" value="' +
         escapeAttr(r.name) +
         '" /></td>' +
+        '<td class="num"><input type="text" class="line-amt-prev" inputmode="decimal" data-key="' +
+        key +
+        '" data-id="' +
+        r.id +
+        '" value="' +
+        escapeAttr(r.amountPrev != null ? r.amountPrev : '') +
+        '" placeholder="0" /></td>' +
         '<td class="num"><input type="text" class="line-amt" inputmode="decimal" data-key="' +
         key +
         '" data-id="' +
@@ -365,6 +465,14 @@
     return t;
   }
 
+  function sumLinesPrev(rows) {
+    var t = 0;
+    for (var i = 0; i < rows.length; i++) {
+      t += parseAmount(rows[i].amountPrev);
+    }
+    return t;
+  }
+
   function getRows(key) {
     if (key === 'assets') return state.assets;
     if (key === 'liabilities') return state.liabilities;
@@ -382,10 +490,12 @@
     byId('tbody-liab').innerHTML = rowHtml(state.liabilities, 'liabilities');
     byId('tbody-pl').innerHTML = rowHtml(state.plLines, 'plLines');
 
+    byId('total-assets-prev').textContent = formatINR(sumLinesPrev(state.assets));
     byId('total-assets').textContent = formatINR(sumLines(state.assets));
+    byId('total-liab-prev').textContent = formatINR(sumLinesPrev(state.liabilities));
     byId('total-liab').textContent = formatINR(sumLines(state.liabilities));
-    var plNet = computePlNet();
-    byId('total-pl-net').textContent = formatINR(plNet);
+    byId('total-pl-net-prev').textContent = formatINR(computePlNetPrev());
+    byId('total-pl-net').textContent = formatINR(computePlNet());
     byId('pl-net-label').textContent =
       state.entityType === 'corporate'
         ? 'Profit / (loss) for the period'
@@ -407,8 +517,18 @@
     return t;
   }
 
+  function computePlNetPrev() {
+    var lines = state.plLines;
+    if (lines.length === 0) return 0;
+    var t = 0;
+    for (var i = 0; i < lines.length; i++) {
+      t += parseAmount(lines[i].amountPrev);
+    }
+    return t;
+  }
+
   function bindTableInputs() {
-    var inputs = document.querySelectorAll('.line-name, .line-amt');
+    var inputs = document.querySelectorAll('.line-name, .line-amt, .line-amt-prev');
     for (var i = 0; i < inputs.length; i++) {
       inputs[i].onchange = onLineChange;
       inputs[i].onblur = onLineChange;
@@ -416,8 +536,11 @@
   }
 
   function updateTotalsOnly() {
+    byId('total-assets-prev').textContent = formatINR(sumLinesPrev(state.assets));
     byId('total-assets').textContent = formatINR(sumLines(state.assets));
+    byId('total-liab-prev').textContent = formatINR(sumLinesPrev(state.liabilities));
     byId('total-liab').textContent = formatINR(sumLines(state.liabilities));
+    byId('total-pl-net-prev').textContent = formatINR(computePlNetPrev());
     byId('total-pl-net').textContent = formatINR(computePlNet());
   }
 
@@ -430,6 +553,7 @@
     for (var i = 0; i < rows.length; i++) {
       if (rows[i].id === id) {
         if (el.classList.contains('line-name')) rows[i].name = el.value;
+        else if (el.classList.contains('line-amt-prev')) rows[i].amountPrev = el.value;
         else rows[i].amount = el.value;
         break;
       }
@@ -439,11 +563,42 @@
     autoSave();
   }
 
+  function mergePrevFromImported(importedObj) {
+    if (!importedObj || typeof importedObj !== 'object') return;
+    var ia = normalizeRows(importedObj.assets || []);
+    var il = normalizeRows(importedObj.liabilities || []);
+    var ip = normalizeRows(importedObj.plLines || []);
+
+    function mergeRows(current, imported) {
+      var byName = {};
+      for (var i = 0; i < imported.length; i++) {
+        var r = imported[i];
+        var k = (r.name || '').trim().toLowerCase();
+        if (k) byName[k] = r.amount != null ? String(r.amount) : '';
+      }
+      return current.map(function (r) {
+        var k = (r.name || '').trim().toLowerCase();
+        var prevVal =
+          k && byName[k] !== undefined ? byName[k] : r.amountPrev || '';
+        return {
+          id: r.id,
+          name: r.name,
+          amount: r.amount,
+          amountPrev: prevVal
+        };
+      });
+    }
+
+    state.assets = mergeRows(state.assets, ia);
+    state.liabilities = mergeRows(state.liabilities, il);
+    state.plLines = mergeRows(state.plLines, ip);
+  }
+
   function addRow(key) {
     if (isLocked()) return;
     collectForm();
     var rows = getRows(key).slice();
-    rows.push({ id: uid(), name: '', amount: '' });
+    rows.push({ id: uid(), name: '', amount: '', amountPrev: '' });
     setRows(key, rows);
     renderTables();
   }
@@ -462,14 +617,16 @@
     collectForm();
     return JSON.stringify(
       {
-        version: 2,
+        version: 3,
         savedAt: new Date().toISOString(),
         entityType: state.entityType,
         entityName: state.entityName,
+        clientFileKey: state.clientFileKey,
         cin: state.cin,
         pan: state.pan,
         periodFrom: state.periodFrom,
         periodTo: state.periodTo,
+        financialYearKey: getIndianFYKeyFromPeriodEnd(state.periodTo),
         ieMode: state.ieMode,
         assets: state.assets,
         liabilities: state.liabilities,
@@ -490,14 +647,15 @@
     var o = JSON.parse(text);
     state.entityType = o.entityType === 'noncorporate' ? 'noncorporate' : 'corporate';
     state.entityName = o.entityName || '';
+    state.clientFileKey = o.clientFileKey != null ? String(o.clientFileKey) : '';
     state.cin = o.cin || '';
     state.pan = o.pan || '';
     state.periodFrom = o.periodFrom || '';
     state.periodTo = o.periodTo || '';
     state.ieMode = !!o.ieMode;
-    state.assets = Array.isArray(o.assets) ? o.assets : [];
-    state.liabilities = Array.isArray(o.liabilities) ? o.liabilities : [];
-    state.plLines = Array.isArray(o.plLines) ? o.plLines : [];
+    state.assets = normalizeRows(o.assets);
+    state.liabilities = normalizeRows(o.liabilities);
+    state.plLines = normalizeRows(o.plLines);
     state.notes = o.notes || '';
     migrateFromFile(o);
     if (!state.assets.length && !state.liabilities.length && !state.plLines.length) {
@@ -510,13 +668,222 @@
     if (ctx.userId) appendAudit('save');
     var blob = new Blob([toJSON()], { type: 'application/json;charset=utf-8' });
     var a = document.createElement('a');
-    var base = (state.entityName || 'financial-statements').replace(/[^a-z0-9-_]+/gi, '-').slice(0, 60);
+    var fy = getIndianFYKeyFromPeriodEnd(state.periodTo);
+    var key = sanitizeClientKeyForFile(state.clientFileKey) || 'Client';
+    var base =
+      (key + '_' + (fy || 'FY')).replace(/[^a-zA-Z0-9-_]+/g, '-') || 'financial-statements';
     a.href = URL.createObjectURL(blob);
     a.download = base + FILE_EXT;
     a.click();
     URL.revokeObjectURL(a.href);
     autoSave();
     renderAuditLog();
+  }
+
+  function saveToDataFolder() {
+    if (isLocked()) return;
+    if (!serverAvailable) {
+      alert('Run PMCA Tools via the Node server (npm start) to save under Data/FinancialStatements/.');
+      return;
+    }
+    collectForm();
+    var fy = getIndianFYKeyFromPeriodEnd(state.periodTo);
+    var key = sanitizeClientKeyForFile(byId('client-file-key').value);
+    if (!fy) {
+      alert('Set the reporting period end date so the financial year (e.g. 2025-26) can be determined.');
+      return;
+    }
+    if (!key) {
+      alert('Enter a file name key for this client (e.g. A, B, C). The file will be saved as ' + key + '_' + fy + '.fsjson');
+      return;
+    }
+    var payload = JSON.parse(toJSON());
+    fetch('/api/financial-statements/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fy: fy, clientKey: key, data: payload })
+    })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || r.status); });
+        return r.json();
+      })
+      .then(function (data) {
+        if (ctx.userId) appendAudit('save_to_data');
+        renderAuditLog();
+        autoSave();
+        alert('Saved to server:\n' + (data.relativePath || ''));
+      })
+      .catch(function (err) {
+        alert('Could not save: ' + (err && err.message ? err.message : String(err)));
+      });
+  }
+
+  function openLoadDataModal() {
+    if (!serverAvailable || isLocked()) return;
+    refreshYearSelects(function () {
+      byId('fs-load-modal').style.display = 'flex';
+      byId('fs-load-modal').setAttribute('aria-hidden', 'false');
+    });
+  }
+
+  function closeLoadDataModal() {
+    var m = byId('fs-load-modal');
+    if (m) {
+      m.style.display = 'none';
+      m.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  function refreshYearSelects(done) {
+    fetch('/api/financial-statements/years')
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (data) {
+        var years = (data && data.years) || [];
+        var sel = byId('load-data-fy');
+        var selImp = byId('import-prev-fy');
+        [sel, selImp].forEach(function (s) {
+          if (!s) return;
+          s.innerHTML = '';
+          years.forEach(function (y) {
+            var o = document.createElement('option');
+            o.value = y;
+            o.textContent = y;
+            s.appendChild(o);
+          });
+        });
+        if (sel && sel.options.length) sel.selectedIndex = 0;
+        if (selImp && selImp.options.length) selImp.selectedIndex = 0;
+        return years.length ? fetchFileListForFy(byId('load-data-fy').value, 'load-data-file') : Promise.resolve();
+      })
+      .then(function () {
+        if (byId('import-prev-fy') && byId('import-prev-fy').value) {
+          return fetchFileListForFy(byId('import-prev-fy').value, 'import-prev-file-select');
+        }
+      })
+      .then(function () {
+        if (typeof done === 'function') done();
+      })
+      .catch(function () {
+        if (typeof done === 'function') done();
+      });
+  }
+
+  function fetchFileListForFy(fy, selectId) {
+    var sel = byId(selectId);
+    if (!fy || !sel) return Promise.resolve();
+    return fetch('/api/financial-statements/years/' + encodeURIComponent(fy) + '/files')
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (data) {
+        var files = (data && data.files) || [];
+        sel.innerHTML = '';
+        files.forEach(function (f) {
+          var o = document.createElement('option');
+          o.value = f;
+          o.textContent = f;
+          sel.appendChild(o);
+        });
+        updateLoadPathHint();
+      });
+  }
+
+  function updateLoadPathHint() {
+    var fy = byId('load-data-fy') && byId('load-data-fy').value;
+    var f = byId('load-data-file') && byId('load-data-file').value;
+    var hint = byId('load-data-path-hint');
+    if (hint && fy && f) {
+      hint.textContent = 'Data/FinancialStatements/' + fy + '/' + f;
+    } else if (hint) hint.textContent = '';
+  }
+
+  function confirmLoadFromData() {
+    var fy = byId('load-data-fy').value;
+    var file = byId('load-data-file').value;
+    if (!fy || !file) {
+      alert('Select financial year and file.');
+      return;
+    }
+    fetch(
+      '/api/financial-statements/read?fy=' +
+        encodeURIComponent(fy) +
+        '&file=' +
+        encodeURIComponent(file)
+    )
+      .then(function (r) {
+        if (!r.ok) throw new Error('Not found or server error');
+        return r.text();
+      })
+      .then(function (text) {
+        fromJSON(text);
+        syncFormFields();
+        try {
+          localStorage.setItem(STORAGE_KEY, toJSON());
+        } catch (e) { /* ignore */ }
+        if (ctx.userId) appendAudit('load_from_data');
+        renderAuditLog();
+        closeLoadDataModal();
+      })
+      .catch(function () {
+        alert('Could not load file from server.');
+      });
+  }
+
+  function importPrevFromServer() {
+    if (isLocked() || !serverAvailable) return;
+    var fy = byId('import-prev-fy').value;
+    var file = byId('import-prev-file-select').value;
+    if (!fy || !file) {
+      alert('Select prior financial year and file.');
+      return;
+    }
+    fetch(
+      '/api/financial-statements/read?fy=' +
+        encodeURIComponent(fy) +
+        '&file=' +
+        encodeURIComponent(file)
+    )
+      .then(function (r) {
+        if (!r.ok) throw new Error('fail');
+        return r.text();
+      })
+      .then(function (text) {
+        var o = JSON.parse(text);
+        mergePrevFromImported(o);
+        collectForm();
+        if (ctx.userId) appendAudit('import_previous_year_server');
+        syncFormFields();
+        autoSave();
+        renderAuditLog();
+        alert('Previous year amounts imported from server file. Check line names match.');
+      })
+      .catch(function () {
+        alert('Could not import file.');
+      });
+  }
+
+  function onImportPrevFile(e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f || isLocked()) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var o = JSON.parse(reader.result);
+        mergePrevFromImported(o);
+        collectForm();
+        if (ctx.userId) appendAudit('import_previous_year_file');
+        syncFormFields();
+        autoSave();
+        renderAuditLog();
+        alert('Previous year amounts imported. Line items matched by name.');
+      } catch (err) {
+        alert('Invalid file.');
+      }
+    };
+    reader.readAsText(f);
   }
 
   function doFinalise() {
@@ -660,6 +1027,29 @@
     } catch (e) { /* ignore */ }
   }
 
+  function checkServer() {
+    fetch('/api/financial-statements/years')
+      .then(function (r) {
+        serverAvailable = r.ok;
+        var hint = byId('fs-server-hint');
+        var wrap = byId('fs-import-server-wrap');
+        if (hint) hint.style.display = serverAvailable ? 'block' : 'none';
+        if (wrap) wrap.style.display = serverAvailable ? 'block' : 'none';
+        updateToolbarDataButtons();
+        if (serverAvailable) {
+          refreshYearSelects();
+        }
+      })
+      .catch(function () {
+        serverAvailable = false;
+        var hint = byId('fs-server-hint');
+        if (hint) hint.style.display = 'none';
+        var wrap = byId('fs-import-server-wrap');
+        if (wrap) wrap.style.display = 'none';
+        updateToolbarDataButtons();
+      });
+  }
+
   window.addEventListener('message', function (e) {
     if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'financial-statements-user') {
@@ -699,6 +1089,8 @@
         window.parent.postMessage({ type: 'financial-statements-ready' }, '*');
       }
     } catch (err) { /* ignore */ }
+
+    checkServer();
 
     function switchEntityType(newType) {
       if (isLocked()) {
@@ -742,9 +1134,26 @@
       persistDraft();
     };
 
-    ['entity-name', 'cin', 'pan', 'period-from', 'period-to', 'notes-text'].forEach(function (id) {
+    ['entity-name', 'cin', 'pan', 'period-from', 'period-to', 'notes-text', 'client-file-key'].forEach(function (id) {
       var el = byId(id);
-      if (el) el.addEventListener('input', persistDraft);
+      if (el) el.addEventListener('input', function () {
+        if (id === 'entity-name') {
+          var ck = byId('client-file-key');
+          if (ck && !ck.dataset.touched) {
+            var sug = suggestClientKeyFromEntityName(byId('entity-name').value);
+            if (sug) ck.value = sug;
+          }
+        }
+        if (id === 'client-file-key') {
+          byId('client-file-key').dataset.touched = '1';
+        }
+        persistDraft();
+      });
+    });
+
+    byId('period-to').addEventListener('change', function () {
+      updateYearLabelsUi();
+      persistDraft();
     });
 
     byId('btn-save-file').onclick = saveFile;
@@ -754,6 +1163,23 @@
     byId('btn-reset-template').onclick = resetWithConfirm;
     byId('btn-finalise').onclick = doFinalise;
     byId('btn-unfinalise').onclick = doUnfinalise;
+    byId('btn-save-data').onclick = saveToDataFolder;
+    byId('btn-load-data').onclick = openLoadDataModal;
+    byId('load-data-cancel').onclick = closeLoadDataModal;
+    byId('load-data-confirm').onclick = confirmLoadFromData;
+    byId('btn-import-prev-file').onclick = function () {
+      byId('import-prev-file-input').click();
+    };
+    byId('import-prev-file-input').onchange = onImportPrevFile;
+    byId('btn-import-prev-server').onclick = importPrevFromServer;
+
+    byId('load-data-fy').onchange = function () {
+      fetchFileListForFy(byId('load-data-fy').value, 'load-data-file').then(updateLoadPathHint);
+    };
+    byId('load-data-file').onchange = updateLoadPathHint;
+    byId('import-prev-fy').onchange = function () {
+      fetchFileListForFy(byId('import-prev-fy').value, 'import-prev-file-select');
+    };
 
     byId('add-asset').onclick = function () {
       addRow('assets');

@@ -14,6 +14,29 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'Data');
 const DB_FILE = path.join(DATA_DIR, 'database.json');
+const FIN_STMT_ROOT = path.join(DATA_DIR, 'FinancialStatements');
+
+function safeFinancialYear(fy) {
+  if (!fy || typeof fy !== 'string' || !/^\d{4}-\d{2}$/.test(fy.trim())) return null;
+  return fy.trim();
+}
+
+function safeClientKeyForFile(key) {
+  if (key == null || String(key).trim() === '') return null;
+  const s = String(key)
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 80);
+  return s || null;
+}
+
+function ensureFinStmtDir(fy) {
+  const dir = path.join(FIN_STMT_ROOT, fy);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
@@ -171,6 +194,92 @@ app.post('/api/save', (req, res) => {
   } catch (e) {
     console.error('POST /api/save error', e);
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+/** Financial statements: Data/FinancialStatements/{FY}/{ClientKey}_{FY}.fsjson */
+app.get('/api/financial-statements/years', (req, res) => {
+  try {
+    if (!fs.existsSync(FIN_STMT_ROOT)) {
+      return res.json({ years: [] });
+    }
+    const years = fs
+      .readdirSync(FIN_STMT_ROOT, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .filter((n) => /^\d{4}-\d{2}$/.test(n))
+      .sort();
+    res.json({ years });
+  } catch (e) {
+    console.error('GET /api/financial-statements/years', e);
+    res.status(500).json({ error: 'Failed to list years' });
+  }
+});
+
+app.get('/api/financial-statements/years/:fy/files', (req, res) => {
+  try {
+    const fy = safeFinancialYear(req.params.fy);
+    if (!fy) return res.status(400).json({ error: 'Invalid financial year' });
+    const dir = path.join(FIN_STMT_ROOT, fy);
+    if (!fs.existsSync(dir)) return res.json({ files: [] });
+    const files = fs
+      .readdirSync(dir)
+      .filter((f) => f.endsWith('.fsjson'))
+      .sort();
+    res.json({ files });
+  } catch (e) {
+    console.error('GET /api/financial-statements/years/:fy/files', e);
+    res.status(500).json({ error: 'Failed to list files' });
+  }
+});
+
+app.get('/api/financial-statements/read', (req, res) => {
+  try {
+    const fy = safeFinancialYear(req.query.fy);
+    const file = req.query.file;
+    if (!fy || !file || typeof file !== 'string') {
+      return res.status(400).json({ error: 'fy and file required' });
+    }
+    const base = path.basename(file);
+    if (base !== file || base.includes('..')) {
+      return res.status(400).json({ error: 'Invalid file' });
+    }
+    const fp = path.join(FIN_STMT_ROOT, fy, base);
+    if (!fs.existsSync(fp)) return res.status(404).json({ error: 'Not found' });
+    const data = fs.readFileSync(fp, 'utf8');
+    res.type('application/json').send(data);
+  } catch (e) {
+    console.error('GET /api/financial-statements/read', e);
+    res.status(500).json({ error: 'Failed to read file' });
+  }
+});
+
+app.post('/api/financial-statements/save', (req, res) => {
+  try {
+    const body = req.body;
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ error: 'Invalid body' });
+    }
+    const fy = safeFinancialYear(body.fy);
+    const clientKey = safeClientKeyForFile(body.clientKey);
+    if (!fy || !clientKey) {
+      return res.status(400).json({ error: 'Valid fy and clientKey required' });
+    }
+    const data = body.data;
+    if (data == null) return res.status(400).json({ error: 'data required' });
+    const dir = ensureFinStmtDir(fy);
+    const fname = `${clientKey}_${fy}.fsjson`;
+    const fp = path.join(dir, fname);
+    const json =
+      typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    fs.writeFileSync(fp, json, 'utf8');
+    res.json({
+      ok: true,
+      relativePath: path.join('Data', 'FinancialStatements', fy, fname).replace(/\\/g, '/')
+    });
+  } catch (e) {
+    console.error('POST /api/financial-statements/save', e);
+    res.status(500).json({ error: 'Failed to save' });
   }
 });
 
