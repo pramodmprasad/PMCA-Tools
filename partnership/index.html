@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Partnership Deed Tool</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Partnership Deed Tool</h1>
+      <p class="subtitle">Prepare Partnership Deed</p>
+    </header>
+
+    <div class="file-actions-bar">
+      <button type="button" class="btn btn-outline" id="load-file-btn">Load File</button>
+      <span class="staff-display" id="partnership-staff-display">Staff: —</span>
+      <input type="file" id="partnership-file-input" accept=".pdt,.json" style="display:none;" />
+    </div>
+
+    <main>
+      <form id="deed-form">
+        <section class="card">
+          <h2>Partnership details</h2>
+          <div class="field">
+            <label for="partnership-name">Partnership Name <span class="required">*</span></label>
+            <input type="text" id="partnership-name" placeholder="e.g. ABC & Associates" required />
+          </div>
+          <div class="field">
+            <label for="partnership-address">Address <span class="required">*</span></label>
+            <textarea id="partnership-address" rows="3" placeholder="Full address of the partnership firm"></textarea>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="commencement-date">Partnership Commencement Date <span class="required">*</span></label>
+              <input type="date" id="commencement-date" />
+            </div>
+            <div class="field">
+              <label for="duration">Duration of Partnership <span class="required">*</span></label>
+              <input type="text" id="duration" placeholder="e.g. 5 years / At will" required />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="agreement-date">Deed preparation date <span class="required">*</span></label>
+              <input type="date" id="agreement-date" required />
+            </div>
+            <div class="field"></div>
+          </div>
+          <div class="field">
+            <label for="objective">Objective of partnership <span class="required">*</span></label>
+            <textarea id="objective" rows="3" placeholder="Business object and nature of the firm"></textarea>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="interest-capital">Interest rate on capital (%) <span class="required">*</span></label>
+              <input type="text" id="interest-capital" placeholder="e.g. 12" inputmode="decimal" value="12" required />
+            </div>
+            <div class="field">
+              <label for="interest-loan">Interest rate on loan from partner (%) <span class="required">*</span></label>
+              <input type="text" id="interest-loan" placeholder="e.g. 10" inputmode="decimal" value="10" required />
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Partners</h2>
+          <div class="field">
+            <label for="num-partners">No. of Partners <span class="required">*</span></label>
+            <input type="number" id="num-partners" min="2" value="2" />
+          </div>
+          <div id="partners-container"></div>
+        </section>
+
+        <section class="card">
+          <h2>Stamp</h2>
+          <div class="row">
+            <div class="field">
+              <label for="stamp-no">SL No. <span class="required">*</span></label>
+              <input type="text" id="stamp-no" placeholder="SL number" required />
+            </div>
+            <div class="field">
+              <label for="stamp-date">Stamp Paper Date <span class="required">*</span></label>
+              <input type="date" id="stamp-date" required />
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="stamp-amount">Stamp Paper Amount (Rs.) <span class="required">*</span></label>
+              <input type="text" id="stamp-amount" placeholder="5000" inputmode="decimal" value="5000" required />
+            </div>
+            <div class="field"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Additional points (after clause 23)</h2>
+          <p class="field-hint">Optional. These clauses will appear in the deed after clause 23 and before clause 24.</p>
+          <div class="field">
+            <label for="additional-point-1">Additional point 1</label>
+            <textarea id="additional-point-1" rows="2" placeholder="Enter clause text (optional)"></textarea>
+          </div>
+          <div class="field">
+            <label for="additional-point-2">Additional point 2</label>
+            <textarea id="additional-point-2" rows="2" placeholder="Enter clause text (optional)"></textarea>
+          </div>
+          <div class="field">
+            <label for="additional-point-3">Additional point 3</label>
+            <textarea id="additional-point-3" rows="2" placeholder="Enter clause text (optional)"></textarea>
+          </div>
+          <div class="field">
+            <label for="additional-point-4">Additional point 4</label>
+            <textarea id="additional-point-4" rows="2" placeholder="Enter clause text (optional)"></textarea>
+          </div>
+          <div class="field">
+            <label for="additional-point-5">Additional point 5</label>
+            <textarea id="additional-point-5" rows="2" placeholder="Enter clause text (optional)"></textarea>
+          </div>
+        </section>
+
+        <div id="validation-errors" class="validation-errors" role="alert" aria-live="polite"></div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="preview-btn">Preview Deed</button>
+          <button type="button" class="btn btn-outline" id="save-file-btn-bottom">Save File</button>
+          <button type="button" class="btn btn-outline" id="export-word-btn" title="To add partner names: Insert &gt; Footer &gt; Edit Footer. When saving in Word, use Save As &gt; Word Document (.docx) to avoid an extra _files folder.">Export Word</button>
+          <button type="button" class="btn btn-outline" id="reset-btn">Reset Form</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <div id="preview-modal" class="modal" aria-hidden="true">
+    <div class="modal-content deed-preview-wrap">
+      <div class="modal-header">
+        <h2>Deed Preview</h2>
+        <button type="button" class="close-btn" id="close-preview" aria-label="Close">&times;</button>
+      </div>
+      <div id="deed-preview" class="deed-preview"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" id="export-word-from-preview" title="To add partner names: Insert &gt; Footer &gt; Edit Footer. When saving in Word, use Save As &gt; Word Document (.docx) to avoid an extra _files folder.">Export Word</button>
+        <button type="button" class="btn btn-outline" id="close-preview-2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

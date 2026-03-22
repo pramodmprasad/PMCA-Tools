@@ -1,0 +1,12 @@
+{
+  "name": "pmca-tools",
+  "version": "1.0.0",
+  "description": "PMCA Tools – optional server for concurrent multi-user saves",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

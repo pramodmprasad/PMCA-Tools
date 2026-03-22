@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Local / confidential data (passwords, client DSC records, deeds)
+Data/database.json
+Data/DSC/
+Data/Partnership/
+
+# Environment / secrets
+.env
+.env.*
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.log

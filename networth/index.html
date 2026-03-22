@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Net Worth Certificate Tool – Visa Processing</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Net Worth Certificate Tool</h1>
+      <p class="subtitle">For Chartered Accountant – Visa Processing</p>
+    </header>
+
+    <div class="file-actions-bar">
+      <button type="button" class="btn btn-outline" id="load-file-btn">Load File</button>
+      <span class="staff-display" id="networth-staff-display">Staff: —</span>
+      <input type="file" id="file-input" accept=".nwc" style="display:none;" />
+      <div class="default-folder-bar" id="default-folder-bar">
+        <span class="default-folder-label">Default folder:</span>
+        <span class="default-folder-path" id="default-folder-path">Not set</span>
+        <button type="button" class="btn btn-outline btn-small" id="choose-default-folder-btn">Choose folder</button>
+        <p class="default-folder-hint" id="default-folder-hint">Recommended: <code id="networth-data-path-display">Data\Networth</code></p>
+      </div>
+    </div>
+
+    <main>
+      <form id="certificate-form">
+        <!-- A: Visa applicants -->
+        <section class="card" id="section-a">
+          <h2>A. Visa Applicants</h2>
+          <div class="field">
+            <label for="num-applicants">Number of persons applying for visa</label>
+            <input type="number" id="num-applicants" min="1" value="1" />
+          </div>
+          <div class="field">
+            <label for="country-visiting">Country visiting <span class="required">*</span></label>
+            <select id="country-visiting" class="country-select">
+            </select>
+          </div>
+          <div id="applicants-container"></div>
+        </section>
+
+        <!-- B: Persons whose net worth is assessed -->
+        <section class="card" id="section-b">
+          <h2>B. Persons Whose Net Worth Is Assessed</h2>
+          <div class="field">
+            <label for="num-assessed">Number of persons whose net worth is assessed</label>
+            <input type="number" id="num-assessed" min="0" value="0" />
+          </div>
+          <div id="assessed-container"></div>
+        </section>
+
+        <!-- C: Place and date -->
+        <section class="card" id="section-c">
+          <h2>C. Place and Date of Signing</h2>
+          <div class="row">
+            <div class="field">
+              <label for="place">Place <span class="required">*</span></label>
+              <input type="text" id="place" placeholder="e.g. Kochi" value="Kochi" />
+            </div>
+            <div class="field">
+              <label for="signing-date">Date <span class="required">*</span></label>
+              <input type="date" id="signing-date" />
+            </div>
+          </div>
+        </section>
+
+        <!-- D: UDIN -->
+        <section class="card" id="section-d">
+          <h2>D. UDIN</h2>
+          <div class="field">
+            <label for="udin">Unique Document Identification Number</label>
+            <input type="text" id="udin" placeholder="Enter UDIN" />
+          </div>
+        </section>
+
+        <!-- E: Conversion Details -->
+        <section class="card" id="section-e">
+          <h2>E. Conversion Details</h2>
+          <p class="hint">Foreign currency is taken from the first visa applicant. Enter INR values; foreign currency is calculated from the rate as on date of signing.</p>
+          <div class="row">
+            <div class="field">
+              <label for="asset-currency">Foreign currency</label>
+              <input type="text" id="asset-currency" placeholder="From first applicant" maxlength="6" readonly class="readonly" />
+            </div>
+            <div class="field">
+              <label for="conversion-rate">Conversion rate (1 foreign currency = ? INR) <span class="required">*</span></label>
+              <input type="text" id="conversion-rate" placeholder="e.g. 83.33 for USD" inputmode="decimal" />
+              <button type="button" class="btn btn-secondary btn-fetch-rate" id="fetch-rate-btn">Fetch rate as on date of signing</button>
+              <span id="rate-status" class="rate-status"></span>
+              <p class="hint" style="margin-top:0.5rem;">Rate is fetched from a free exchange-rate API for the signing date. Foreign value = INR ÷ rate (1 FC = rate INR).</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- F: Annexure 1 Details -->
+        <section class="card" id="section-f">
+          <h2>F. Annexure 1 Details (Page 2)</h2>
+          <p class="hint">Enter detailed descriptions for each asset that will appear in Annexure 1.</p>
+          
+          <!-- Immovable Property -->
+          <div class="annexure-category">
+            <h3>Immovable Property</h3>
+            <div class="field">
+              <label>Number of immovable property particulars</label>
+              <input type="number" id="annex-num-immovable" min="0" value="0" />
+            </div>
+            <div id="annex-immovable-container"></div>
+          </div>
+
+          <!-- Movable Property -->
+          <div class="annexure-category">
+            <h3>Movable Property</h3>
+            <div class="field">
+              <label>Number of movable property particulars</label>
+              <input type="number" id="annex-num-movable" min="0" value="0" />
+            </div>
+            <div id="annex-movable-container"></div>
+          </div>
+
+          <!-- Personal & Family Savings -->
+          <div class="annexure-category">
+            <h3>Personal & Family Savings</h3>
+            <div class="field">
+              <label>Number of savings particulars</label>
+              <input type="number" id="annex-num-savings" min="0" value="0" />
+            </div>
+            <div id="annex-savings-container"></div>
+          </div>
+        </section>
+
+        <div id="validation-errors" class="validation-errors" role="alert" aria-live="polite"></div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="preview-btn">Preview Certificate</button>
+          <button type="button" class="btn btn-outline" id="save-file-btn">Save File</button>
+          <button type="button" class="btn btn-outline" id="reset-btn">Reset Form</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <!-- Certificate preview modal -->
+  <div id="preview-modal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Certificate Preview</h2>
+        <button type="button" class="close-btn" id="close-preview" aria-label="Close">&times;</button>
+      </div>
+      <div id="certificate-preview" class="certificate-preview"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="export-word-from-preview">Export Word</button>
+        <button type="button" class="btn btn-outline" id="close-preview-2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
