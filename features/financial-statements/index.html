@@ -93,8 +93,32 @@
               Use <strong>Income &amp; Expenditure</strong> (for non-profit / trust / society)
             </label>
           </div>
+          <div class="field nonprofit-only">
+            <label>
+              <input type="checkbox" id="compilation-report-issued" />
+              <strong>Compilation engagement</strong> (no audit report — use compilation report instead)
+            </label>
+          </div>
         </div>
       </section>
+
+      <nav class="doc-nav" id="doc-nav" aria-label="Document sections">
+        <span class="doc-nav-label">Documents:</span>
+        <a href="#doc-audit-report" class="doc-nav-link" id="nav-audit-report" data-doc="doc-audit-report" data-hide-when-compilation="1">1. Audit report</a>
+        <a href="#doc-directors-report" class="doc-nav-link corp-only-nav" id="nav-directors-report" data-doc="doc-directors-report">2. Directors Report</a>
+        <a href="#doc-compilation-report" class="doc-nav-link nonprofit-only-nav" id="nav-compilation-report" data-doc="doc-compilation-report">3. Compilation report</a>
+        <a href="#doc-cash-flow" class="doc-nav-link" data-doc="doc-cash-flow">4. Cash flow statement</a>
+        <a href="#doc-balance-sheet" class="doc-nav-link" data-doc="doc-balance-sheet">5. Balance sheet</a>
+        <a href="#doc-profit-loss" class="doc-nav-link" data-doc="doc-profit-loss">6. Profit and loss</a>
+        <a href="#doc-notes" class="doc-nav-link" data-doc="doc-notes">7. Notes to accounts</a>
+        <a href="#doc-mgmt-repr" class="doc-nav-link" data-doc="doc-mgmt-repr">8. Management representation letter</a>
+        <a href="#doc-audit-engagement" class="doc-nav-link" data-doc="doc-audit-engagement">9. Audit engagement letter</a>
+        <a href="#doc-board-meetings" class="doc-nav-link corp-only-nav" data-doc="doc-board-meetings">10. Board meeting list</a>
+        <a href="#doc-caro" class="doc-nav-link corp-only-nav" data-doc="doc-caro">11. CARO report</a>
+        <a href="#doc-dir8" class="doc-nav-link corp-only-nav" data-doc="doc-dir8">12. Form DIR 8</a>
+        <a href="#doc-mbp1" class="doc-nav-link corp-only-nav" data-doc="doc-mbp1">13. Form MBP 1</a>
+        <a href="#doc-mgt9" class="doc-nav-link corp-only-nav" data-doc="doc-mgt9">14. Form MGT 9</a>
+      </nav>
 
       <section class="card" id="fs-import-prev-card">
         <h2>Previous year figures</h2>
@@ -114,8 +138,60 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2>Balance sheet</h2>
+      <section class="card doc-section" id="doc-audit-report">
+        <h2>1. Audit report</h2>
+        <p class="hint">Report of the statutory auditor on the financial statements. Hidden for non-corporates when compilation engagement is selected.</p>
+        <div class="field">
+          <textarea id="audit-report-text" rows="12" placeholder="Independent Auditor's Report…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section corp-only-section" id="doc-directors-report">
+        <h2>2. Directors Report</h2>
+        <p class="hint">Annual report of the Board of Directors. Corporate only.</p>
+        <div class="field">
+          <textarea id="directors-report-text" rows="12" placeholder="Report of the Board of Directors…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section nonprofit-only-section" id="doc-compilation-report">
+        <h2>3. Compilation report</h2>
+        <p class="hint">Compilation engagement report. Used when audit is not conducted. Non-corporate only. If compilation is issued, there is no audit report.</p>
+        <div class="field">
+          <textarea id="compilation-report-text" rows="12" placeholder="Compilation Report…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section" id="doc-cash-flow">
+        <h2>4. Cash flow statement</h2>
+        <p class="hint">Statement of cash flows (Operating, Investing, Financing). Figures in INR.</p>
+        <div class="fs-table-wrap">
+          <table class="fs-table" aria-label="Cash flow">
+            <thead>
+              <tr>
+                <th>Particulars</th>
+                <th class="num" id="th-cf-prev">Previous year (₹)</th>
+                <th class="num" id="th-cf-cur">Current year (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-cashflow"></tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td>Net change in cash and cash equivalents</td>
+                <td class="num" id="total-cf-prev">0.00</td>
+                <td class="num" id="total-cf">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="section-actions">
+          <button type="button" class="btn btn-small" id="add-cf">Add row</button>
+          <button type="button" class="btn btn-small" id="remove-cf">Remove last row</button>
+        </div>
+      </section>
+
+      <section class="card doc-section" id="doc-balance-sheet">
+        <h2>5. Balance sheet</h2>
         <p class="hint">Figures in INR. Add or remove rows as needed. Align final presentation with Schedule III (companies) or applicable framework.</p>
         <div class="balance-grid">
           <div>
@@ -173,8 +249,8 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2 id="pl-section-title"><span id="pl-title-display">Statement of Profit and Loss</span></h2>
+      <section class="card doc-section" id="doc-profit-loss">
+        <h2 id="pl-section-title">6. <span id="pl-title-display">Statement of Profit and Loss</span></h2>
         <p class="hint">Enter income as positive and expenses as negative (or follow your trial balance sign convention). Net is the algebraic sum of the column.</p>
         <div class="fs-table-wrap">
           <table class="fs-table" aria-label="Profit and loss">
@@ -201,11 +277,72 @@
         </div>
       </section>
 
-      <section class="card">
-        <h2>Notes &amp; assumptions</h2>
+      <section class="card doc-section" id="doc-notes">
+        <h2>7. Notes to accounts</h2>
         <div class="field">
-          <label for="notes-text">Free text (disclosures, rounding, basis of preparation)</label>
-          <textarea id="notes-text" rows="5" placeholder="Optional notes for working paper or file…"></textarea>
+          <label for="notes-text">Notes and disclosures</label>
+          <textarea id="notes-text" rows="8" placeholder="Notes to the financial statements, basis of preparation, rounding policy…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section" id="doc-mgmt-repr">
+        <h2>8. Management representation letter</h2>
+        <div class="field">
+          <textarea id="mgmt-repr-text" rows="10" placeholder="Management Representation Letter…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section" id="doc-audit-engagement">
+        <h2>9. Audit engagement letter</h2>
+        <div class="field">
+          <textarea id="audit-engagement-text" rows="10" placeholder="Audit Engagement Letter…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section corp-only-section" id="doc-board-meetings">
+        <h2>10. Board meeting list</h2>
+        <p class="hint">Corporate only. List of board meetings held during the year.</p>
+        <div class="fs-table-wrap">
+          <table class="fs-table">
+            <thead><tr><th>Date</th><th>Subject / agenda</th></tr></thead>
+            <tbody id="tbody-board-meetings"></tbody>
+          </table>
+        </div>
+        <div class="section-actions">
+          <button type="button" class="btn btn-small" id="add-board-meeting">Add meeting</button>
+          <button type="button" class="btn btn-small" id="remove-board-meeting">Remove last</button>
+        </div>
+      </section>
+
+      <section class="card doc-section corp-only-section" id="doc-caro">
+        <h2>11. CARO report</h2>
+        <p class="hint">Companies (Auditor's Report) Order. Corporate only.</p>
+        <div class="field">
+          <textarea id="caro-text" rows="12" placeholder="CARO Report…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section corp-only-section" id="doc-dir8">
+        <h2>12. Form DIR 8</h2>
+        <p class="hint">Particulars of directors. Corporate only.</p>
+        <div class="field">
+          <textarea id="dir8-text" rows="8" placeholder="Form DIR 8 contents…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section corp-only-section" id="doc-mbp1">
+        <h2>13. Form MBP 1</h2>
+        <p class="hint">Register of interests. Corporate only.</p>
+        <div class="field">
+          <textarea id="mbp1-text" rows="8" placeholder="Form MBP 1 contents…"></textarea>
+        </div>
+      </section>
+
+      <section class="card doc-section corp-only-section" id="doc-mgt9">
+        <h2>14. Form MGT 9</h2>
+        <p class="hint">Extract of annual return. Corporate only.</p>
+        <div class="field">
+          <textarea id="mgt9-text" rows="8" placeholder="Form MGT 9 contents…"></textarea>
         </div>
       </section>
 

@@ -22,10 +22,22 @@
     periodFrom: '',
     periodTo: '',
     ieMode: false,
+    compilationReportIssued: false,
     assets: [],
     liabilities: [],
     plLines: [],
+    cashFlowLines: [],
     notes: '',
+    boardMeetings: [],
+    auditReportText: '',
+    directorsReportText: '',
+    compilationReportText: '',
+    mgmtReprText: '',
+    auditEngagementText: '',
+    caroText: '',
+    dir8Text: '',
+    mbp1Text: '',
+    mgt9Text: '',
     finalised: false,
     finalisedAt: '',
     finalisedByUserId: '',
@@ -133,6 +145,17 @@
     state.finalisedByUserId = o.finalisedByUserId || '';
     state.finalisedByStaffName = o.finalisedByStaffName || '';
     state.clientFileKey = o.clientFileKey != null ? String(o.clientFileKey) : '';
+    state.compilationReportIssued = !!o.compilationReportIssued;
+    state.auditReportText = o.auditReportText != null ? String(o.auditReportText) : '';
+    state.directorsReportText = o.directorsReportText != null ? String(o.directorsReportText) : '';
+    state.compilationReportText = o.compilationReportText != null ? String(o.compilationReportText) : '';
+    state.mgmtReprText = o.mgmtReprText != null ? String(o.mgmtReprText) : '';
+    state.auditEngagementText = o.auditEngagementText != null ? String(o.auditEngagementText) : '';
+    state.caroText = o.caroText != null ? String(o.caroText) : '';
+    state.dir8Text = o.dir8Text != null ? String(o.dir8Text) : '';
+    state.mbp1Text = o.mbp1Text != null ? String(o.mbp1Text) : '';
+    state.mgt9Text = o.mgt9Text != null ? String(o.mgt9Text) : '';
+    state.boardMeetings = Array.isArray(o.boardMeetings) ? o.boardMeetings : [];
   }
 
   function normalizeRow(r) {
@@ -185,6 +208,24 @@
         row('Depreciation and amortisation'),
         row('Other expenses'),
         row('Tax expense')
+      ],
+      cashFlowLines: [
+        row('Cash flows from operating activities'),
+        row('Profit before tax'),
+        row('Adjustments for depreciation/amortisation'),
+        row('Changes in working capital'),
+        row('Cash generated from operations'),
+        row('Tax paid'),
+        row('Net cash from operating activities'),
+        row('Cash flows from investing activities'),
+        row('Purchase of PPE / investments'),
+        row('Proceeds from sale of assets'),
+        row('Net cash used in investing activities'),
+        row('Cash flows from financing activities'),
+        row('Proceeds from borrowings'),
+        row('Repayment of borrowings'),
+        row('Net cash from financing activities'),
+        row('Net increase / (decrease) in cash')
       ]
     };
   }
@@ -219,6 +260,12 @@
         row('Depreciation'),
         row('Other expenses'),
         row('Tax')
+      ],
+      cashFlowLines: [
+        row('Cash from operating activities'),
+        row('Cash from investing activities'),
+        row('Cash from financing activities'),
+        row('Net change in cash')
       ]
     };
   }
@@ -229,6 +276,23 @@
     state.assets = d.assets;
     state.liabilities = d.liabilities;
     state.plLines = d.plLines;
+    state.cashFlowLines = d.cashFlowLines || [];
+  }
+
+  function updateSectionVisibility() {
+    var corp = state.entityType === 'corporate';
+    var compIssued = !!state.compilationReportIssued;
+    document.querySelectorAll('.corp-only-section, .corp-only-nav').forEach(function (el) {
+      el.classList.toggle('visible', corp);
+    });
+    document.querySelectorAll('.nonprofit-only-section, .nonprofit-only-nav').forEach(function (el) {
+      el.classList.toggle('visible', !corp);
+    });
+    var auditSection = byId('doc-audit-report');
+    var auditNav = byId('nav-audit-report');
+    var hideAudit = !corp && compIssued;
+    if (auditSection) auditSection.classList.toggle('hidden', hideAudit);
+    if (auditNav) auditNav.classList.toggle('hidden', hideAudit);
   }
 
   function updateYearLabelsUi() {
@@ -238,11 +302,11 @@
     if (disp) disp.value = fy ? fy + ' (save folder: Data/FinancialStatements/' + fy + '/)' : '';
     var prevLabel = prevFy ? 'Previous year — ' + prevFy + ' (₹)' : 'Previous year (₹)';
     var curLabel = fy ? 'Current year — ' + fy + ' (₹)' : 'Current year (₹)';
-    ['th-assets-prev', 'th-liab-prev', 'th-pl-prev'].forEach(function (id) {
+    ['th-assets-prev', 'th-liab-prev', 'th-pl-prev', 'th-cf-prev'].forEach(function (id) {
       var el = byId(id);
       if (el) el.textContent = prevLabel;
     });
-    ['th-assets-cur', 'th-liab-cur', 'th-pl-cur'].forEach(function (id) {
+    ['th-assets-cur', 'th-liab-cur', 'th-pl-cur', 'th-cf-cur'].forEach(function (id) {
       var el = byId(id);
       if (el) el.textContent = curLabel;
     });
@@ -389,7 +453,18 @@
     }
 
     byId('pl-title-display').textContent = plTitle();
+    if (byId('compilation-report-issued')) byId('compilation-report-issued').checked = !!state.compilationReportIssued;
+    if (byId('audit-report-text')) byId('audit-report-text').value = state.auditReportText;
+    if (byId('directors-report-text')) byId('directors-report-text').value = state.directorsReportText;
+    if (byId('compilation-report-text')) byId('compilation-report-text').value = state.compilationReportText;
+    if (byId('mgmt-repr-text')) byId('mgmt-repr-text').value = state.mgmtReprText;
+    if (byId('audit-engagement-text')) byId('audit-engagement-text').value = state.auditEngagementText;
+    if (byId('caro-text')) byId('caro-text').value = state.caroText;
+    if (byId('dir8-text')) byId('dir8-text').value = state.dir8Text;
+    if (byId('mbp1-text')) byId('mbp1-text').value = state.mbp1Text;
+    if (byId('mgt9-text')) byId('mgt9-text').value = state.mgt9Text;
     updateYearLabelsUi();
+    updateSectionVisibility();
     renderTables();
     updateStaffDisplay();
     renderAuditLog();
@@ -413,6 +488,18 @@
     state.periodTo = byId('period-to').value;
     state.notes = byId('notes-text').value;
     state.ieMode = byId('ie-mode').checked;
+    state.compilationReportIssued = byId('compilation-report-issued')
+      ? byId('compilation-report-issued').checked
+      : false;
+    state.auditReportText = byId('audit-report-text') ? byId('audit-report-text').value : '';
+    state.directorsReportText = byId('directors-report-text') ? byId('directors-report-text').value : '';
+    state.compilationReportText = byId('compilation-report-text') ? byId('compilation-report-text').value : '';
+    state.mgmtReprText = byId('mgmt-repr-text') ? byId('mgmt-repr-text').value : '';
+    state.auditEngagementText = byId('audit-engagement-text') ? byId('audit-engagement-text').value : '';
+    state.caroText = byId('caro-text') ? byId('caro-text').value : '';
+    state.dir8Text = byId('dir8-text') ? byId('dir8-text').value : '';
+    state.mbp1Text = byId('mbp1-text') ? byId('mbp1-text').value : '';
+    state.mgt9Text = byId('mgt9-text') ? byId('mgt9-text').value : '';
   }
 
   function rowHtml(rows, key) {
@@ -476,19 +563,43 @@
   function getRows(key) {
     if (key === 'assets') return state.assets;
     if (key === 'liabilities') return state.liabilities;
+    if (key === 'cashFlow') return state.cashFlowLines;
     return state.plLines;
   }
 
   function setRows(key, rows) {
     if (key === 'assets') state.assets = rows;
     else if (key === 'liabilities') state.liabilities = rows;
+    else if (key === 'cashFlow') state.cashFlowLines = rows;
     else state.plLines = rows;
+  }
+
+  function boardMeetingRowHtml() {
+    var rows = state.boardMeetings || [];
+    var html = '';
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      html +=
+        '<tr data-idx="' + i + '">' +
+        '<td><input type="date" class="bm-date" data-idx="' + i + '" value="' + escapeAttr(r.date || '') + '" /></td>' +
+        '<td><input type="text" class="bm-subject" data-idx="' + i + '" value="' + escapeAttr(r.subject || '') + '" placeholder="Agenda / subject" /></td>' +
+        '</tr>';
+    }
+    return html;
   }
 
   function renderTables() {
     byId('tbody-assets').innerHTML = rowHtml(state.assets, 'assets');
     byId('tbody-liab').innerHTML = rowHtml(state.liabilities, 'liabilities');
     byId('tbody-pl').innerHTML = rowHtml(state.plLines, 'plLines');
+    var cfTbody = byId('tbody-cashflow');
+    if (cfTbody) {
+      cfTbody.innerHTML = rowHtml(state.cashFlowLines, 'cashFlow');
+      byId('total-cf-prev').textContent = formatINR(sumLinesPrev(state.cashFlowLines));
+      byId('total-cf').textContent = formatINR(sumLines(state.cashFlowLines));
+    }
+    var bmTbody = byId('tbody-board-meetings');
+    if (bmTbody) bmTbody.innerHTML = boardMeetingRowHtml();
 
     byId('total-assets-prev').textContent = formatINR(sumLinesPrev(state.assets));
     byId('total-assets').textContent = formatINR(sumLines(state.assets));
@@ -504,7 +615,24 @@
           : 'Net profit / (loss)';
 
     bindTableInputs();
+    bindBoardMeetingInputs();
     applyLockedState();
+  }
+
+  function bindBoardMeetingInputs() {
+    document.querySelectorAll('.bm-date, .bm-subject').forEach(function (el) {
+      el.onchange = onBoardMeetingChange;
+      el.onblur = onBoardMeetingChange;
+    });
+  }
+
+  function onBoardMeetingChange(e) {
+    if (isLocked()) return;
+    var idx = parseInt(e.target.getAttribute('data-idx'), 10);
+    if (isNaN(idx) || idx < 0 || !state.boardMeetings[idx]) return;
+    if (e.target.classList.contains('bm-date')) state.boardMeetings[idx].date = e.target.value;
+    else state.boardMeetings[idx].subject = e.target.value;
+    autoSave();
   }
 
   function computePlNet() {
@@ -535,6 +663,13 @@
     }
   }
 
+  function updateTotalsCashFlow() {
+    var elPrev = byId('total-cf-prev');
+    var elCur = byId('total-cf');
+    if (elPrev) elPrev.textContent = formatINR(sumLinesPrev(state.cashFlowLines));
+    if (elCur) elCur.textContent = formatINR(sumLines(state.cashFlowLines));
+  }
+
   function updateTotalsOnly() {
     byId('total-assets-prev').textContent = formatINR(sumLinesPrev(state.assets));
     byId('total-assets').textContent = formatINR(sumLines(state.assets));
@@ -542,6 +677,7 @@
     byId('total-liab').textContent = formatINR(sumLines(state.liabilities));
     byId('total-pl-net-prev').textContent = formatINR(computePlNetPrev());
     byId('total-pl-net').textContent = formatINR(computePlNet());
+    updateTotalsCashFlow();
   }
 
   function onLineChange(e) {
@@ -603,6 +739,25 @@
     renderTables();
   }
 
+  function addBoardMeeting() {
+    if (isLocked()) return;
+    collectForm();
+    if (!state.boardMeetings) state.boardMeetings = [];
+    state.boardMeetings = state.boardMeetings.slice();
+    state.boardMeetings.push({ date: '', subject: '' });
+    renderTables();
+    autoSave();
+  }
+
+  function removeBoardMeeting() {
+    if (isLocked()) return;
+    collectForm();
+    if (!state.boardMeetings || state.boardMeetings.length === 0) return;
+    state.boardMeetings = state.boardMeetings.slice(0, -1);
+    renderTables();
+    autoSave();
+  }
+
   function removeLastRow(key) {
     if (isLocked()) return;
     collectForm();
@@ -631,6 +786,18 @@
         assets: state.assets,
         liabilities: state.liabilities,
         plLines: state.plLines,
+        cashFlowLines: state.cashFlowLines || [],
+        boardMeetings: state.boardMeetings || [],
+        compilationReportIssued: state.compilationReportIssued,
+        auditReportText: state.auditReportText,
+        directorsReportText: state.directorsReportText,
+        compilationReportText: state.compilationReportText,
+        mgmtReprText: state.mgmtReprText,
+        auditEngagementText: state.auditEngagementText,
+        caroText: state.caroText,
+        dir8Text: state.dir8Text,
+        mbp1Text: state.mbp1Text,
+        mgt9Text: state.mgt9Text,
         notes: state.notes,
         finalised: state.finalised,
         finalisedAt: state.finalisedAt,
@@ -656,10 +823,16 @@
     state.assets = normalizeRows(o.assets);
     state.liabilities = normalizeRows(o.liabilities);
     state.plLines = normalizeRows(o.plLines);
+    state.cashFlowLines = normalizeRows(o.cashFlowLines);
+    state.boardMeetings = Array.isArray(o.boardMeetings) ? o.boardMeetings : [];
     state.notes = o.notes || '';
     migrateFromFile(o);
     if (!state.assets.length && !state.liabilities.length && !state.plLines.length) {
       applyEntityDefaults();
+    }
+    if (!state.cashFlowLines || state.cashFlowLines.length === 0) {
+      var d = state.entityType === 'corporate' ? corporateDefaults() : nonCorporateDefaults();
+      state.cashFlowLines = d.cashFlowLines || [];
     }
   }
 
@@ -1133,8 +1306,18 @@
       syncFormFields();
       persistDraft();
     };
+    if (byId('compilation-report-issued')) {
+      byId('compilation-report-issued').onchange = function () {
+        if (isLocked()) return;
+        state.compilationReportIssued = byId('compilation-report-issued').checked;
+        updateSectionVisibility();
+        persistDraft();
+      };
+    }
 
-    ['entity-name', 'cin', 'pan', 'period-from', 'period-to', 'notes-text', 'client-file-key'].forEach(function (id) {
+    ['entity-name', 'cin', 'pan', 'period-from', 'period-to', 'notes-text', 'client-file-key',
+     'audit-report-text', 'directors-report-text', 'compilation-report-text', 'mgmt-repr-text',
+     'audit-engagement-text', 'caro-text', 'dir8-text', 'mbp1-text', 'mgt9-text'].forEach(function (id) {
       var el = byId(id);
       if (el) el.addEventListener('input', function () {
         if (id === 'entity-name') {
@@ -1199,6 +1382,10 @@
     byId('remove-pl').onclick = function () {
       removeLastRow('plLines');
     };
+    if (byId('add-cf')) byId('add-cf').onclick = function () { addRow('cashFlow'); };
+    if (byId('remove-cf')) byId('remove-cf').onclick = function () { removeLastRow('cashFlow'); };
+    if (byId('add-board-meeting')) byId('add-board-meeting').onclick = addBoardMeeting;
+    if (byId('remove-board-meeting')) byId('remove-board-meeting').onclick = removeBoardMeeting;
 
     syncFormFields();
   }

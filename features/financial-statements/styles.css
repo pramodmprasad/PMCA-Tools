@@ -32,6 +32,76 @@ body {
   padding: 1rem 1.5rem 2rem;
 }
 
+.doc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+}
+
+.doc-nav-label {
+  font-weight: 600;
+  color: var(--secondary);
+  margin-right: 0.25rem;
+}
+
+.doc-nav-link {
+  color: var(--primary);
+  text-decoration: none;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+
+.doc-nav-link:hover {
+  background: rgba(13, 71, 161, 0.08);
+}
+
+.doc-section {
+  scroll-margin-top: 1rem;
+}
+
+.doc-nav-link.hidden {
+  display: none !important;
+}
+
+.corp-only-section,
+.corp-only-nav {
+  display: none;
+}
+
+.corp-only-section.visible,
+.corp-only-nav.visible {
+  display: block;
+}
+
+.corp-only-nav.visible {
+  display: inline;
+}
+
+.nonprofit-only-section,
+.nonprofit-only-nav {
+  display: none;
+}
+
+.nonprofit-only-section.visible,
+.nonprofit-only-nav.visible {
+  display: block;
+}
+
+.nonprofit-only-nav.visible {
+  display: inline;
+}
+
+.doc-section.hidden {
+  display: none !important;
+}
+
 header {
   text-align: center;
   margin-bottom: 1rem;
