@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financial Statements — PMCA Tools</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Financial Statements</h1>
+      <p class="subtitle">Balance Sheet &amp; Profit and Loss — Corporate &amp; non-corporate</p>
+    </header>
+
+    <div class="toolbar">
+      <button type="button" class="btn btn-primary" id="btn-save-file">Save file</button>
+      <button type="button" class="btn" id="btn-load-file">Load file</button>
+      <input type="file" id="file-input" accept=".fsjson,.json" style="display:none;" />
+      <button type="button" class="btn" id="btn-print">Print / PDF</button>
+      <button type="button" class="btn" id="btn-reset-template">Reset lines to template</button>
+    </div>
+
+    <div class="print-header" id="print-entity-block"></div>
+
+    <main>
+      <section class="card">
+        <h2>Entity &amp; period</h2>
+        <div class="field">
+          <label>Entity type</label>
+          <div class="entity-toggle">
+            <label>
+              <input type="radio" name="entity-type" id="entity-corp" value="corporate" checked />
+              Corporate (company)
+            </label>
+            <label>
+              <input type="radio" name="entity-type" id="entity-noncorp" value="noncorporate" />
+              Non-corporate (firm / LLP / proprietorship / trust / society)
+            </label>
+          </div>
+          <p class="hint">Switching type reloads default line items (after confirmation if you use Reset).</p>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="entity-name">Name of entity <span style="color:#c62828;">*</span></label>
+            <input type="text" id="entity-name" placeholder="Legal name as per records" />
+          </div>
+          <div class="field corp-only-field">
+            <label for="cin">CIN (if applicable)</label>
+            <input type="text" id="cin" placeholder="Corporate Identification Number" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="pan">PAN</label>
+            <input type="text" id="pan" placeholder="Permanent Account Number" />
+          </div>
+          <div class="field">
+            <label for="period-from">Reporting period from</label>
+            <input type="date" id="period-from" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="period-to">Reporting period to</label>
+            <input type="date" id="period-to" />
+          </div>
+          <div class="field nonprofit-only">
+            <label>
+              <input type="checkbox" id="ie-mode" />
+              Use <strong>Income &amp; Expenditure</strong> (for non-profit / trust / society)
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Balance sheet</h2>
+        <p class="hint">Figures in INR. Add or remove rows as needed. Align final presentation with Schedule III (companies) or applicable framework.</p>
+        <div class="balance-grid">
+          <div>
+            <h3>Assets</h3>
+            <div class="fs-table-wrap">
+              <table class="fs-table" aria-label="Assets">
+                <thead>
+                  <tr>
+                    <th>Particulars</th>
+                    <th class="num">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-assets"></tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td>Total assets</td>
+                    <td class="num" id="total-assets">0.00</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="section-actions">
+              <button type="button" class="btn btn-small" id="add-asset">Add row</button>
+              <button type="button" class="btn btn-small" id="remove-asset">Remove last row</button>
+            </div>
+          </div>
+          <div>
+            <h3>Equity and liabilities</h3>
+            <div class="fs-table-wrap">
+              <table class="fs-table" aria-label="Equity and liabilities">
+                <thead>
+                  <tr>
+                    <th>Particulars</th>
+                    <th class="num">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-liab"></tbody>
+                <tfoot>
+                  <tr class="total-row">
+                    <td>Total equity and liabilities</td>
+                    <td class="num" id="total-liab">0.00</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div class="section-actions">
+              <button type="button" class="btn btn-small" id="add-liab">Add row</button>
+              <button type="button" class="btn btn-small" id="remove-liab">Remove last row</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 id="pl-section-title"><span id="pl-title-display">Statement of Profit and Loss</span></h2>
+        <p class="hint">Enter income as positive and expenses as negative (or follow your trial balance sign convention). Net is the algebraic sum of the column.</p>
+        <div class="fs-table-wrap">
+          <table class="fs-table" aria-label="Profit and loss">
+            <thead>
+              <tr>
+                <th>Particulars</th>
+                <th class="num">Amount (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-pl"></tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td id="pl-net-label">Profit / (loss) for the period</td>
+                <td class="num" id="total-pl-net">0.00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="section-actions">
+          <button type="button" class="btn btn-small" id="add-pl">Add row</button>
+          <button type="button" class="btn btn-small" id="remove-pl">Remove last row</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Notes &amp; assumptions</h2>
+        <div class="field">
+          <label for="notes-text">Free text (disclosures, rounding, basis of preparation)</label>
+          <textarea id="notes-text" rows="5" placeholder="Optional notes for working paper or file…"></textarea>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

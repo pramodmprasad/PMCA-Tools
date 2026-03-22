@@ -8,6 +8,7 @@ Match the existing mini-apps:
 
 - **`networth/`** — `index.html`, `app.js`, `styles.css`, optional `data.js`
 - **`partnership/`** — same idea
+- **`financial-statements/`** — Balance Sheet and P&L for corporate vs non-corporate; save/load `.fsjson`
 
 ## Workflow
 
