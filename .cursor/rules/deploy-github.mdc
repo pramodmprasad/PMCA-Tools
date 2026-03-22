@@ -1,0 +1,39 @@
+---
+description: Push changes from this project to GitHub (PMCA-Tools)
+alwaysApply: true
+---
+
+# Deploy to GitHub
+
+**Repository:** [pramodmprasad/PMCA-Tools](https://github.com/pramodmprasad/PMCA-Tools)  
+**Remote:** `https://github.com/pramodmprasad/PMCA-Tools.git`  
+**Default branch:** `main`
+
+On this machine, `git` may not be on PATH. Use the full executable when running commands for the user:
+
+```powershell
+& "C:\Program Files\Git\bin\git.exe" <subcommand> ...
+```
+
+## Standard publish workflow
+
+1. From the project root: `pull` first if work might exist on GitHub or another clone.
+2. `add` → `commit` with a clear message → `push` to `origin main`.
+
+Example:
+
+```powershell
+Set-Location "e:\OneDrive - Pramod M P & Associates\Worklist\PMCA Tools"
+& "C:\Program Files\Git\bin\git.exe" pull
+& "C:\Program Files\Git\bin\git.exe" add -A
+& "C:\Program Files\Git\bin\git.exe" commit -m "Describe the change"
+& "C:\Program Files\Git\bin\git.exe" push
+```
+
+## Do not commit sensitive data
+
+Respect `.gitignore`: never stage or force-add `Data/database.json`, `Data/DSC/`, `Data/Partnership/`, `node_modules/`, or `.env` files. If the user asks to push those paths, refuse and explain they must stay local or use private secure storage—not the public repo.
+
+## New clone setup (reference)
+
+After `git clone`, run `npm install` and restore local `Data/` files from a secure backup; they are not in the repository.
