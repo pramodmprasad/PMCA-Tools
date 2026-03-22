@@ -591,6 +591,7 @@
       <button class="tab" data-tab="dsc">DSC</button>
       <button class="tab" data-tab="networth">Net Worth</button>
       <button class="tab" data-tab="partnership">Partnership Deed</button>
+      <button class="tab" data-tab="financial-statements">Financial Statements</button>
       <button class="tab" id="tds-payment-tab" data-tab="tds-payment">TDS Payment</button>
       <button class="tab admin-only" data-tab="users">Users</button>
     </nav>
@@ -728,6 +729,13 @@
           <span style="font-size:0.85rem;color:var(--text-muted);line-height:1.2;">Partnership Deed & Reconstituted Partnership Deed – prepare and preview deeds.</span>
         </div>
         <iframe id="partnership-iframe" src="partnership/index.html" title="Partnership Deed Tool" style="width:100%;min-height:calc(100vh - 180px);border:1px solid var(--border);border-radius:6px;background:var(--surface);"></iframe>
+      </section>
+
+      <section id="financial-statements-panel" class="panel">
+        <div class="panel-toolbar" style="margin-bottom:0.25rem;">
+          <span style="font-size:0.85rem;color:var(--text-muted);line-height:1.2;">Balance sheet and profit and loss — corporate and non-corporate. Sign in is required for finalise and user log.</span>
+        </div>
+        <iframe id="financial-statements-iframe" src="features/financial-statements/index.html" title="Financial Statements" style="width:100%;min-height:calc(100vh - 180px);border:1px solid var(--border);border-radius:6px;background:var(--surface);"></iframe>
       </section>
 
       <section id="users-panel" class="panel admin-only">
@@ -1179,12 +1187,30 @@
         if (win) win.postMessage({ type: 'partnership-staff', staffName: staffName }, '*');
       } catch (e) {}
     }
+    function sendFinancialStatementsUser(targetWindow) {
+      try {
+        if (!currentUser) return;
+        var win = targetWindow || (document.getElementById('financial-statements-iframe') && document.getElementById('financial-statements-iframe').contentWindow);
+        if (win) {
+          win.postMessage({
+            type: 'financial-statements-user',
+            userId: currentUser.id,
+            username: currentUser.username || '',
+            staffName: (currentUser.name || currentUser.username || '').trim(),
+            role: currentUser.role || 'user'
+          }, '*');
+        }
+      } catch (e) {}
+    }
     window.addEventListener('message', function (e) {
       if (e.data && e.data.type === 'networth-ready') {
         sendNetworthStaff(e.source);
       }
       if (e.data && e.data.type === 'partnership-ready') {
         sendPartnershipStaff(e.source);
+      }
+      if (e.data && e.data.type === 'financial-statements-ready') {
+        sendFinancialStatementsUser(e.source);
       }
     });
 
@@ -1515,6 +1541,15 @@
           partnershipIframe.src = partnershipIframe.src;
         } catch (err) {}
       }
+      var financialStatementsIframe = document.getElementById('financial-statements-iframe');
+      if (financialStatementsIframe) {
+        try {
+          if (financialStatementsIframe.contentWindow) {
+            financialStatementsIframe.contentWindow.postMessage({ type: 'financial-statements-clear-user' }, '*');
+          }
+          financialStatementsIframe.src = financialStatementsIframe.src;
+        } catch (err) {}
+      }
       const errorEl = document.getElementById('login-error');
       if (message) {
         errorEl.textContent = message;
@@ -1551,6 +1586,9 @@
       sendPartnershipStaff();
       setTimeout(sendPartnershipStaff, 600);
       setTimeout(sendPartnershipStaff, 1200);
+      sendFinancialStatementsUser();
+      setTimeout(sendFinancialStatementsUser, 600);
+      setTimeout(sendFinancialStatementsUser, 1200);
 
       // Restore tab only once per page load (not on every initDashboard), to avoid resetting scroll in Net Worth/Partnership
       if (!hasRestoredActiveTab) {
@@ -4372,6 +4410,18 @@
               }, 100);
             }
             sendPartnershipStaff();
+          } catch (e) {}
+        }
+        if (tab.dataset.tab === 'financial-statements') {
+          try {
+            var fsIframe = document.getElementById('financial-statements-iframe');
+            if (fsIframe && fsIframe.contentWindow) {
+              fsIframe.contentWindow.scrollTo(0, 0);
+              var fsd = fsIframe.contentWindow.document;
+              if (fsd && fsd.documentElement) fsd.documentElement.scrollTop = 0;
+              if (fsd && fsd.body) fsd.body.scrollTop = 0;
+            }
+            sendFinancialStatementsUser();
           } catch (e) {}
         } else if (tab.dataset.tab === 'tds-payment') {
           renderTDSPaymentTable();

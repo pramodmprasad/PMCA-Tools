@@ -4,6 +4,13 @@
   var FILE_EXT = '.fsjson';
   var STORAGE_KEY = 'pmca-fs-draft-v1';
 
+  var ctx = {
+    userId: '',
+    username: '',
+    staffName: '',
+    role: ''
+  };
+
   var state = {
     entityType: 'corporate',
     entityName: '',
@@ -15,11 +22,35 @@
     assets: [],
     liabilities: [],
     plLines: [],
-    notes: ''
+    notes: '',
+    finalised: false,
+    finalisedAt: '',
+    finalisedByUserId: '',
+    finalisedByStaffName: '',
+    auditLog: []
   };
 
   function byId(id) {
     return document.getElementById(id);
+  }
+
+  function isLocked() {
+    return !!state.finalised;
+  }
+
+  function isAdminCtx() {
+    return ctx.role === 'admin';
+  }
+
+  function canUnfinalise() {
+    if (!state.finalised) return false;
+    if (isAdminCtx()) return true;
+    if (ctx.userId && state.finalisedByUserId && ctx.userId === state.finalisedByUserId) return true;
+    return false;
+  }
+
+  function canFinalise() {
+    return !state.finalised && !!ctx.userId;
   }
 
   function parseAmount(s) {
@@ -39,6 +70,28 @@
 
   function uid() {
     return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function appendAudit(action) {
+    if (!state.auditLog) state.auditLog = [];
+    var entry = {
+      at: new Date().toISOString(),
+      action: action,
+      userId: ctx.userId || '',
+      username: ctx.username || '',
+      staffName: ctx.staffName || '',
+      role: ctx.role || ''
+    };
+    state.auditLog.push(entry);
+    if (state.auditLog.length > 200) state.auditLog = state.auditLog.slice(-200);
+  }
+
+  function migrateFromFile(o) {
+    state.auditLog = Array.isArray(o.auditLog) ? o.auditLog : [];
+    state.finalised = !!o.finalised;
+    state.finalisedAt = o.finalisedAt || '';
+    state.finalisedByUserId = o.finalisedByUserId || '';
+    state.finalisedByStaffName = o.finalisedByStaffName || '';
   }
 
   function corporateDefaults() {
@@ -117,6 +170,110 @@
     state.plLines = d.plLines;
   }
 
+  function updateStaffDisplay() {
+    var el = byId('fs-staff-display');
+    var hint = byId('fs-login-hint');
+    if (!el) return;
+    if (ctx.userId) {
+      var label = ctx.staffName || ctx.username || ctx.userId;
+      el.textContent =
+        'User: ' + label + (ctx.role === 'admin' ? ' (Admin)' : '');
+      if (hint) hint.style.display = 'none';
+    } else {
+      el.textContent = 'User: —';
+      if (hint) hint.style.display = 'block';
+    }
+  }
+
+  function updateFinaliseUi() {
+    var btnF = byId('btn-finalise');
+    var btnU = byId('btn-unfinalise');
+    var ban = byId('fs-finalised-banner');
+    if (!btnF || !btnU || !ban) return;
+
+    if (state.finalised) {
+      ban.style.display = 'block';
+      var who = state.finalisedByStaffName || state.finalisedByUserId || '—';
+      var when = state.finalisedAt
+        ? new Date(state.finalisedAt).toLocaleString('en-IN', { hour12: true })
+        : '';
+      ban.textContent =
+        'Finalised — editing is locked. Finalised by ' + who + (when ? ' · ' + when : '') + '.';
+      btnF.style.display = 'none';
+      btnU.style.display = canUnfinalise() ? 'inline-flex' : 'none';
+    } else {
+      ban.style.display = 'none';
+      btnF.style.display = 'inline-flex';
+      btnU.style.display = 'none';
+      btnF.disabled = !canFinalise();
+      btnF.title = canFinalise()
+        ? 'Lock this working paper — only an admin or you can unlock later'
+        : 'Sign in from PMCA Tools to finalise';
+    }
+  }
+
+  function renderAuditLog() {
+    var body = byId('audit-log-body');
+    if (!body) return;
+    var log = state.auditLog || [];
+    if (log.length === 0) {
+      body.innerHTML = '<p class="hint">No entries yet.</p>';
+      return;
+    }
+    var rows = log
+      .slice()
+      .reverse()
+      .slice(0, 50)
+      .map(function (e) {
+        var t = e.at ? new Date(e.at).toLocaleString('en-IN', { hour12: true }) : '';
+        var who = e.staffName || e.username || e.userId || '—';
+        var act = e.action || '';
+        return (
+          '<tr><td>' +
+          escapeHtml(t) +
+          '</td><td>' +
+          escapeHtml(act) +
+          '</td><td>' +
+          escapeHtml(who) +
+          '</td><td>' +
+          escapeHtml(e.role || '') +
+          '</td></tr>'
+        );
+      })
+      .join('');
+    body.innerHTML =
+      '<table class="fs-table"><thead><tr><th>When</th><th>Action</th><th>User</th><th>Role</th></tr></thead><tbody>' +
+      rows +
+      '</tbody></table>';
+  }
+
+  function escapeHtml(s) {
+    if (s == null || s === '') return '';
+    var d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+  function applyLockedState() {
+    var locked = isLocked();
+    var main = byId('fs-main');
+    if (!main) return;
+    var controls = main.querySelectorAll(
+      'input, textarea, select, button'
+    );
+    for (var i = 0; i < controls.length; i++) {
+      var c = controls[i];
+      if (c.id === 'btn-print') continue;
+      if (c.id === 'btn-save-file') continue;
+      if (c.id === 'btn-load-file') continue;
+      if (c.id === 'btn-unfinalise') continue;
+      c.disabled = locked;
+    }
+    var tb = byId('btn-finalise');
+    if (tb) tb.disabled = locked || !canFinalise();
+    updateFinaliseUi();
+  }
+
   function syncFormFields() {
     byId('entity-name').value = state.entityName;
     byId('cin').value = state.cin;
@@ -144,6 +301,9 @@
 
     byId('pl-title-display').textContent = plTitle();
     renderTables();
+    updateStaffDisplay();
+    renderAuditLog();
+    applyLockedState();
   }
 
   function plTitle() {
@@ -234,6 +394,7 @@
           : 'Net profit / (loss)';
 
     bindTableInputs();
+    applyLockedState();
   }
 
   function computePlNet() {
@@ -261,6 +422,7 @@
   }
 
   function onLineChange(e) {
+    if (isLocked()) return;
     var el = e.target;
     var key = el.getAttribute('data-key');
     var id = el.getAttribute('data-id');
@@ -278,6 +440,7 @@
   }
 
   function addRow(key) {
+    if (isLocked()) return;
     collectForm();
     var rows = getRows(key).slice();
     rows.push({ id: uid(), name: '', amount: '' });
@@ -286,6 +449,7 @@
   }
 
   function removeLastRow(key) {
+    if (isLocked()) return;
     collectForm();
     var rows = getRows(key).slice();
     if (rows.length <= 1) return;
@@ -298,7 +462,7 @@
     collectForm();
     return JSON.stringify(
       {
-        version: 1,
+        version: 2,
         savedAt: new Date().toISOString(),
         entityType: state.entityType,
         entityName: state.entityName,
@@ -310,7 +474,12 @@
         assets: state.assets,
         liabilities: state.liabilities,
         plLines: state.plLines,
-        notes: state.notes
+        notes: state.notes,
+        finalised: state.finalised,
+        finalisedAt: state.finalisedAt,
+        finalisedByUserId: state.finalisedByUserId,
+        finalisedByStaffName: state.finalisedByStaffName,
+        auditLog: state.auditLog || []
       },
       null,
       2
@@ -330,6 +499,7 @@
     state.liabilities = Array.isArray(o.liabilities) ? o.liabilities : [];
     state.plLines = Array.isArray(o.plLines) ? o.plLines : [];
     state.notes = o.notes || '';
+    migrateFromFile(o);
     if (!state.assets.length && !state.liabilities.length && !state.plLines.length) {
       applyEntityDefaults();
     }
@@ -337,6 +507,7 @@
 
   function saveFile() {
     collectForm();
+    if (ctx.userId) appendAudit('save');
     var blob = new Blob([toJSON()], { type: 'application/json;charset=utf-8' });
     var a = document.createElement('a');
     var base = (state.entityName || 'financial-statements').replace(/[^a-z0-9-_]+/gi, '-').slice(0, 60);
@@ -344,6 +515,40 @@
     a.download = base + FILE_EXT;
     a.click();
     URL.revokeObjectURL(a.href);
+    autoSave();
+    renderAuditLog();
+  }
+
+  function doFinalise() {
+    if (!canFinalise()) {
+      alert('Sign in from PMCA Tools (main app) to finalise.');
+      return;
+    }
+    if (!confirm('Finalise this financial statement? Editing will be locked until an admin or you unlock it.')) return;
+    collectForm();
+    state.finalised = true;
+    state.finalisedAt = new Date().toISOString();
+    state.finalisedByUserId = ctx.userId;
+    state.finalisedByStaffName = ctx.staffName || ctx.username || ctx.userId;
+    appendAudit('finalise');
+    autoSave();
+    syncFormFields();
+  }
+
+  function doUnfinalise() {
+    if (!canUnfinalise()) {
+      alert('Only an administrator or the user who finalised can unfinalise.');
+      return;
+    }
+    if (!confirm('Unfinalise and allow editing again?')) return;
+    collectForm();
+    state.finalised = false;
+    state.finalisedAt = '';
+    state.finalisedByUserId = '';
+    state.finalisedByStaffName = '';
+    appendAudit('unfinalise');
+    autoSave();
+    syncFormFields();
   }
 
   function loadFile() {
@@ -377,6 +582,7 @@
   }
 
   function persistDraft() {
+    if (isLocked()) return;
     autoSave();
   }
 
@@ -412,6 +618,10 @@
   }
 
   function resetWithConfirm() {
+    if (isLocked()) {
+      alert('This statement is finalised. Unfinalise first to reset line items.');
+      return;
+    }
     if (!confirm('Reset to default line items for the selected entity type? Unsaved data in this form will be replaced.')) return;
     collectForm();
     applyEntityDefaults();
@@ -419,6 +629,51 @@
     syncFormFields();
     persistDraft();
   }
+
+  function applyUserPayload(data) {
+    if (!data || typeof data !== 'object') return;
+    ctx.userId = data.userId != null ? String(data.userId) : '';
+    ctx.username = data.username != null ? String(data.username) : '';
+    ctx.staffName =
+      data.staffName != null && String(data.staffName).trim()
+        ? String(data.staffName).trim()
+        : '';
+    ctx.role = data.role != null ? String(data.role) : '';
+    updateStaffDisplay();
+    updateFinaliseUi();
+  }
+
+  function pullUserFromParent() {
+    try {
+      if (window.parent && window.parent !== window) {
+        var u = window.parent.currentUser;
+        if (u && u.id) {
+          applyUserPayload({
+            userId: u.id,
+            username: u.username || '',
+            staffName: u.name || u.username || '',
+            role: u.role || 'user'
+          });
+          return;
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  window.addEventListener('message', function (e) {
+    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'financial-statements-user') {
+      applyUserPayload(e.data);
+    }
+    if (e.data.type === 'financial-statements-clear-user') {
+      ctx.userId = '';
+      ctx.username = '';
+      ctx.staffName = '';
+      ctx.role = '';
+      updateStaffDisplay();
+      updateFinaliseUi();
+    }
+  });
 
   function init() {
     applyEntityDefaults();
@@ -438,7 +693,18 @@
       syncFormFields();
     }
 
+    pullUserFromParent();
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'financial-statements-ready' }, '*');
+      }
+    } catch (err) { /* ignore */ }
+
     function switchEntityType(newType) {
+      if (isLocked()) {
+        alert('Unfinalise before changing entity type.');
+        return;
+      }
       if (state.entityType === newType) return;
       if (
         !confirm(
@@ -470,6 +736,7 @@
       if (byId('entity-noncorp').checked) switchEntityType('noncorporate');
     };
     byId('ie-mode').onchange = function () {
+      if (isLocked()) return;
       state.ieMode = byId('ie-mode').checked;
       syncFormFields();
       persistDraft();
@@ -485,6 +752,8 @@
     byId('file-input').onchange = onFileSelected;
     byId('btn-print').onclick = printView;
     byId('btn-reset-template').onclick = resetWithConfirm;
+    byId('btn-finalise').onclick = doFinalise;
+    byId('btn-unfinalise').onclick = doUnfinalise;
 
     byId('add-asset').onclick = function () {
       addRow('assets');

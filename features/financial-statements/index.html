@@ -14,16 +14,24 @@
     </header>
 
     <div class="toolbar">
+      <span class="staff-display" id="fs-staff-display">User: —</span>
+      <button type="button" class="btn btn-outline" id="btn-finalise" title="Lock editing — only admin or the user who finalised can unlock">Finalise</button>
+      <button type="button" class="btn btn-finalised" id="btn-unfinalise" style="display:none;" title="Unlock for editing">Unfinalise</button>
       <button type="button" class="btn btn-primary" id="btn-save-file">Save file</button>
       <button type="button" class="btn" id="btn-load-file">Load file</button>
       <input type="file" id="file-input" accept=".fsjson,.json" style="display:none;" />
       <button type="button" class="btn" id="btn-print">Print / PDF</button>
       <button type="button" class="btn" id="btn-reset-template">Reset lines to template</button>
     </div>
+    <p class="toolbar-hint" id="fs-login-hint">
+      Open this tool from PMCA Tools (logged in) to record your user on saves and to use Finalise.
+    </p>
+
+    <div id="fs-finalised-banner" class="finalised-banner" style="display:none"></div>
 
     <div class="print-header" id="print-entity-block"></div>
 
-    <main>
+    <main id="fs-main">
       <section class="card">
         <h2>Entity &amp; period</h2>
         <div class="field">
@@ -161,6 +169,12 @@
           <label for="notes-text">Free text (disclosures, rounding, basis of preparation)</label>
           <textarea id="notes-text" rows="5" placeholder="Optional notes for working paper or file…"></textarea>
         </div>
+      </section>
+
+      <section class="card" id="audit-log-card">
+        <h2>Activity log</h2>
+        <p class="hint">Recorded when you save, finalise, or unfinalise (requires login from PMCA Tools).</p>
+        <div class="fs-table-wrap" id="audit-log-body"></div>
       </section>
     </main>
   </div>

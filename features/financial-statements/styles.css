@@ -56,12 +56,69 @@ header h1 {
   gap: 0.5rem;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.35rem;
   padding: 0.75rem;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+
+.staff-display {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-right: auto;
+  text-align: left;
+  min-width: 10rem;
+}
+
+.toolbar-hint {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.finalised-banner {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border: 2px solid #ef4444;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 1rem;
+  border-radius: var(--radius);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: rgba(13, 71, 161, 0.08);
+}
+
+.btn-finalised {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border: 1px solid #dc2626 !important;
+}
+
+.btn-finalised:hover:not(:disabled) {
+  background: #dc2626 !important;
+}
+
+#audit-log-body table {
+  font-size: 0.8rem;
+}
+
+#audit-log-body td {
+  vertical-align: top;
 }
 
 .btn {
@@ -267,7 +324,7 @@ table.fs-table {
 
 @media print {
   body { background: #fff; }
-  .toolbar, .section-actions, .entity-toggle, .hint, header .subtitle { display: none !important; }
+  .toolbar, .toolbar-hint, .section-actions, .entity-toggle, .hint, header .subtitle, #audit-log-card { display: none !important; }
   .print-header { display: block; text-align: center; margin-bottom: 1rem; }
   .print-header h1 { font-size: 1.1rem; margin: 0 0 0.25rem; }
   .print-header p { margin: 0.15rem 0; font-size: 0.85rem; }
